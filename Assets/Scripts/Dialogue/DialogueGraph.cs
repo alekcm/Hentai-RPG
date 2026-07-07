@@ -113,6 +113,14 @@ namespace RPG.Dialogue
         // Тег квеста, который устанавливается этим узлом
         public string questTagOnSelect;
 
+        // Пассивные проверки (стиль Pathfinder/Disco Elysium)
+        public SkillCheckData passiveSkillCheck;
+        [TextArea(2, 5)]
+        public string passiveSuccessText;
+        [TextArea(2, 5)]
+        public string passiveFailureText;
+        public string passiveSuccessFlag;
+
         public bool IsEndNode => choices.Count == 0 && string.IsNullOrEmpty(autoAdvanceToNodeId);
     }
 
@@ -202,6 +210,11 @@ namespace RPG.Dialogue
                 ConditionType.CompanionAffinity => CheckCompanionAffinity(parameter, int.Parse(value)),
                 ConditionType.CompanionPresent => CheckCompanionPresent(parameter),
                 ConditionType.TimeOfDay => CheckTimeOfDay(parameter),
+                ConditionType.LevelCheck => CheckLevel(int.Parse(!string.IsNullOrEmpty(value) ? value : parameter)),
+                ConditionType.RaceCheck => CheckRace(!string.IsNullOrEmpty(value) ? value : parameter),
+                ConditionType.ClassCheck => CheckClass(!string.IsNullOrEmpty(value) ? value : parameter),
+                ConditionType.GenderCheck => CheckGender(!string.IsNullOrEmpty(value) ? value : parameter),
+                ConditionType.RaceOrClassCheck => CheckRaceOrClass(!string.IsNullOrEmpty(value) ? value : parameter),
                 _ => true
             };
             return invert ? !result : result;
@@ -256,6 +269,68 @@ namespace RPG.Dialogue
                 _ => true
             };
         }
+
+        private bool CheckLevel(int minLevel)
+        {
+            var player = Character.CharacterCreation.Instance?.Character;
+            return player != null && player.stats.level >= minLevel;
+        }
+
+        private bool CheckRace(string raceName)
+        {
+            var player = Character.CharacterCreation.Instance?.Character;
+            if (player == null || string.IsNullOrEmpty(raceName)) return false;
+            string[] parts = raceName.Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries);
+            string playerRace = player.race.ToString();
+            foreach (var p in parts)
+            {
+                if (playerRace.Equals(p.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        private bool CheckClass(string className)
+        {
+            var player = Character.CharacterCreation.Instance?.Character;
+            if (player == null || string.IsNullOrEmpty(className)) return false;
+            string[] parts = className.Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries);
+            string playerClass = player.characterClass.ToString();
+            foreach (var p in parts)
+            {
+                if (playerClass.Equals(p.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        private bool CheckGender(string genderName)
+        {
+            var player = Character.CharacterCreation.Instance?.Character;
+            if (player == null || string.IsNullOrEmpty(genderName)) return false;
+            string[] parts = genderName.Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries);
+            string playerGender = player.gender.ToString();
+            foreach (var p in parts)
+            {
+                if (playerGender.Equals(p.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        private bool CheckRaceOrClass(string names)
+        {
+            var player = Character.CharacterCreation.Instance?.Character;
+            if (player == null || string.IsNullOrEmpty(names)) return false;
+            string[] parts = names.Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries);
+            string playerRace = player.race.ToString();
+            string playerClass = player.characterClass.ToString();
+            foreach (var p in parts)
+            {
+                string clean = p.Trim();
+                if (playerRace.Equals(clean, StringComparison.OrdinalIgnoreCase) ||
+                    playerClass.Equals(clean, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
     }
 
     public enum ConditionType
@@ -270,7 +345,9 @@ namespace RPG.Dialogue
         TimeOfDay,
         LevelCheck,
         RaceCheck,
-        ClassCheck
+        ClassCheck,
+        GenderCheck,
+        RaceOrClassCheck
     }
 
     /// <summary>
@@ -305,7 +382,8 @@ namespace RPG.Dialogue
         ChangeScene,
         TriggerEvent,
         UnlockAbility,
-        ApplyEffect
+        ApplyEffect,
+        StartDialogue
     }
 
     /// <summary>

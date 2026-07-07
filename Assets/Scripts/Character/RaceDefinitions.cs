@@ -37,13 +37,11 @@ namespace RPG.Character
                         displayName = "Человек",
                         description = "Универсальные и адаптивные. Люди преуспевают во всём, за что берутся.",
                         attributeBonuses = new() {
-                            { AttributeType.Strength, 1 }, { AttributeType.Dexterity, 1 },
-                            { AttributeType.Constitution, 1 }, { AttributeType.Intelligence, 1 },
-                            { AttributeType.Wisdom, 1 }, { AttributeType.Charisma, 1 }
+                            { AttributeType.BodyPower, 1 }, { AttributeType.AcademicKnowledge, 1 }
                         },
                         racialTraits = new() { "versatile", "adaptable", "ambitious" },
                         racialAbilities = new() { "bonus_skill_proficiency" },
-                        personalityArchetype = "Универсал без выраженных расовых особенностей"
+                        personalityArchetype = "Амбициозный, легко адаптируется к любым условиям Веридии"
                     }
                 },
                 {
@@ -53,11 +51,11 @@ namespace RPG.Character
                         displayName = "Эльф",
                         description = "Грациозные и долгоживущие. Эльфы обладают природной связью с магией.",
                         attributeBonuses = new() {
-                            { AttributeType.Dexterity, 2 }, { AttributeType.Intelligence, 1 }
+                            { AttributeType.SleightOfHand, 1 }, { AttributeType.Magic, 1 }
                         },
                         racialTraits = new() { "darkvision", "fey_ancestry", "keen_senses" },
                         racialAbilities = new() { "trance", "perception_proficiency" },
-                        personalityArchetype = "Элегантный, несколько надменный, мудрый не по годам"
+                        personalityArchetype = "Элегантный, мудрый не по годам, тонко чувствует потоки магии"
                     }
                 },
                 {
@@ -67,25 +65,25 @@ namespace RPG.Character
                         displayName = "Дварф",
                         description = "Крепкие и упрямые. Дварфы — непревзойдённые мастера и воины.",
                         attributeBonuses = new() {
-                            { AttributeType.Constitution, 2 }, { AttributeType.Strength, 1 }
+                            { AttributeType.BodyKnowledge, 1 }, { AttributeType.BodyPower, 1 }
                         },
                         racialTraits = new() { "darkvision", "dwarven_resilience", "stonecunning" },
                         racialAbilities = new() { "poison_resistance", "tool_proficiency" },
-                        personalityArchetype = "Прямолинейный, верный друзьям, не забывающий обид"
+                        personalityArchetype = "Прямолинейный, верный друзьям, невероятно стойкий"
                     }
                 },
                 {
                     RaceType.HalfOrc, new RaceDefinition
                     {
                         raceType = RaceType.HalfOrc,
-                        displayName = "Полуорк",
-                        description = "Сильные и свирепые. Полуорки сочетают грубую силу с человеческой хитростью.",
+                        displayName = "Орк / Полуорк",
+                        description = "Сильные и свирепые. Воплощение первобытной мощи и стойкости.",
                         attributeBonuses = new() {
-                            { AttributeType.Strength, 2 }, { AttributeType.Constitution, 1 }
+                            { AttributeType.BodyPower, 1 }, { AttributeType.BodyKnowledge, 1 }
                         },
                         racialTraits = new() { "darkvision", "relentless_endurance", "savage_attacks" },
                         racialAbilities = new() { "intimidation_proficiency" },
-                        personalityArchetype = "Грубый снаружи, но способный на глубокие чувства"
+                        personalityArchetype = "Гордый воин, уважающий только силу, скрывающий боль за яростью"
                     }
                 },
                 {
@@ -93,13 +91,13 @@ namespace RPG.Character
                     {
                         raceType = RaceType.HalfElf,
                         displayName = "Полуэльф",
-                        description = "Обаятельные и универсальные. Полуэльфы — природные дипломаты.",
+                        description = "Обаятельные и универсальные. Природные дипломаты и хитрецы.",
                         attributeBonuses = new() {
-                            { AttributeType.Charisma, 2 }, { AttributeType.Dexterity, 1 }
+                            { AttributeType.Trickery, 1 }, { AttributeType.Attentiveness, 1 }
                         },
                         racialTraits = new() { "darkvision", "fey_ancestry", "skill_versatility" },
                         racialAbilities = new() { "two_extra_skill_proficiencies" },
-                        personalityArchetype = "Обаятельный, легко находит общий язык с кем угодно"
+                        personalityArchetype = "Обаятельный, легко находит общий язык в любой ситуации"
                     }
                 },
                 {
@@ -107,13 +105,13 @@ namespace RPG.Character
                     {
                         raceType = RaceType.Tiefling,
                         displayName = "Тифлинг",
-                        description = "Потомки демонов. Тифлинги обладают тёмной магией и притягательной внешностью.",
+                        description = "Потомки бездны. Обладают врожденной магией и притягательным плутовством.",
                         attributeBonuses = new() {
-                            { AttributeType.Charisma, 2 }, { AttributeType.Intelligence, 1 }
+                            { AttributeType.Trickery, 1 }, { AttributeType.Magic, 1 }
                         },
                         racialTraits = new() { "darkvision", "hellish_resistance", "infernal_legacy" },
                         racialAbilities = new() { "fire_resistance", "thaumaturgy_cantrip" },
-                        personalityArchetype = "Загадочный, привыкший к подозрению окружающих, обаятельный"
+                        personalityArchetype = "Загадочный, обаятельный, привыкший к подозрению инквизиции"
                     }
                 },
                 {
@@ -121,13 +119,13 @@ namespace RPG.Character
                     {
                         raceType = RaceType.Halfling,
                         displayName = "Полурослик",
-                        description = "Маленькие и удачливые. Полурослики избегают неприятностей лучше всех.",
+                        description = "Маленькие и удачливые. Ловкость рук помогает им избегать неприятностей.",
                         attributeBonuses = new() {
-                            { AttributeType.Dexterity, 2 }, { AttributeType.Charisma, 1 }
+                            { AttributeType.SleightOfHand, 1 }, { AttributeType.Trickery, 1 }
                         },
                         racialTraits = new() { "lucky", "brave", "halfling_nimbleness" },
                         racialAbilities = new() { "reroll_ones", "advantage_vs_frightened" },
-                        personalityArchetype = "Весёлый, любопытный, неожиданно храбрый"
+                        personalityArchetype = "Весёлый, любопытный, мастерски взаимодействует с механизмами"
                     }
                 }
             };

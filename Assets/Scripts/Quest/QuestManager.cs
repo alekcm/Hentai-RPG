@@ -49,7 +49,7 @@ namespace RPG.Quest
 
         private void OnDestroy()
         {
-            if (GameManager.Instance?.EventBus != null)
+            if (GameManager.Instance != null && GameManager.Instance && GameManager.Instance.EventBus != null)
                 GameManager.Instance.EventBus.OnGlobalFlagChanged -= OnGlobalFlagChanged;
         }
 

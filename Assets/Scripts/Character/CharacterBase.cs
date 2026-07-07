@@ -48,12 +48,14 @@ namespace RPG.Character
             {
                 switch (bonus.Key)
                 {
-                    case AttributeType.Strength: stats.strength += bonus.Value; break;
-                    case AttributeType.Dexterity: stats.dexterity += bonus.Value; break;
-                    case AttributeType.Constitution: stats.constitution += bonus.Value; break;
-                    case AttributeType.Intelligence: stats.intelligence += bonus.Value; break;
-                    case AttributeType.Wisdom: stats.wisdom += bonus.Value; break;
-                    case AttributeType.Charisma: stats.charisma += bonus.Value; break;
+                    case AttributeType.BodyPower: stats.bodyPower += bonus.Value; break;
+                    case AttributeType.Attentiveness: stats.attentiveness += bonus.Value; break;
+                    case AttributeType.Nature: stats.nature += bonus.Value; break;
+                    case AttributeType.Trickery: stats.trickery += bonus.Value; break;
+                    case AttributeType.SleightOfHand: stats.sleightOfHand += bonus.Value; break;
+                    case AttributeType.BodyKnowledge: stats.bodyKnowledge += bonus.Value; break;
+                    case AttributeType.AcademicKnowledge: stats.academicKnowledge += bonus.Value; break;
+                    case AttributeType.Magic: stats.magic += bonus.Value; break;
                 }
             }
         }

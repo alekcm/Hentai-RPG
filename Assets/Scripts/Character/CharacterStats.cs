@@ -5,18 +5,22 @@ using System.Collections.Generic;
 namespace RPG.Character
 {
     /// <summary>
-    /// Все характеристики и навыки персонажа. Используется и для игрока, и для компаньонов.
+    /// Все характеристики и навыки персонажа по системе RPG старой школы (Веридия).
+    /// Используется и для игрока, и для компаньонов.
+    /// Система бросков: 2d6 + Характеристика против СЛ (Сложности Проверки). При преимуществе: 3d6 (выбор 2 лучших).
     /// </summary>
     [Serializable]
     public class CharacterStats
     {
-        [Header("Core Attributes (1-20)")]
-        public int strength = 10;       // Сила - ближний бой, грузоподъёмность
-        public int dexterity = 10;      // Ловкость - дальний бой, скрытность, инициатива
-        public int constitution = 10;   // Телосложение - HP, выносливость
-        public int intelligence = 10;   // Интеллект - магия знаний, расследование
-        public int wisdom = 10;         // Мудрость - восприятие, выживание, магия природы
-        public int charisma = 10;       // Харизма - убеждение, обман, запугивание
+        [Header("Core Characteristics (-1 to +3)")]
+        public int bodyPower = 0;          // Мощность тела
+        public int attentiveness = 0;      // Внимательность (восприятие + проницательность)
+        public int nature = 0;             // Природа
+        public int trickery = 0;           // Плутовство (скрытность + обман)
+        public int sleightOfHand = 0;      // Ловкость рук (воровство + взаимодействие с механизмами)
+        public int bodyKnowledge = 0;      // Знания тела
+        public int academicKnowledge = 0;  // Академические знания (религия, история и т.д.)
+        public int magic = 0;              // Магия
 
         [Header("Derived Stats")]
         public int maxHP = 20;
@@ -26,7 +30,7 @@ namespace RPG.Character
         public int armorClass = 10;
         public int initiative = 0;
 
-        [Header("Skills (proficiency bonus applied)")]
+        [Header("Skills & Proficiencies")]
         public List<SkillEntry> skills = new();
 
         [Header("Progression")]
@@ -34,77 +38,105 @@ namespace RPG.Character
         public int experience = 0;
         public int experienceToNextLevel = 100;
 
-        // Модификатор характеристики
-        public int GetModifier(int statValue)
-        {
-            return Mathf.FloorToInt((statValue - 10) / 2f);
-        }
+        // Legacy D&D aliases for backward compatibility with combat and utility scripts
+        public int strength { get => bodyPower; set => bodyPower = value; }
+        public int dexterity { get => sleightOfHand; set => sleightOfHand = value; }
+        public int constitution { get => bodyKnowledge; set => bodyKnowledge = value; }
+        public int intelligence { get => academicKnowledge; set => academicKnowledge = value; }
+        public int wisdom { get => attentiveness; set => attentiveness = value; }
+        public int charisma { get => trickery; set => trickery = value; }
 
-        public int GetStrengthMod => GetModifier(strength);
-        public int GetDexterityMod => GetModifier(dexterity);
-        public int GetConstitutionMod => GetModifier(constitution);
-        public int GetIntelligenceMod => GetModifier(intelligence);
-        public int GetWisdomMod => GetModifier(wisdom);
-        public int GetCharismaMod => GetModifier(charisma);
+        public int GetStrengthMod => bodyPower;
+        public int GetDexterityMod => sleightOfHand;
+        public int GetConstitutionMod => bodyKnowledge;
+        public int GetIntelligenceMod => academicKnowledge;
+        public int GetWisdomMod => attentiveness;
+        public int GetCharismaMod => trickery;
+
+        public static string GetRussianName(SkillType skill) => SkillEntry.GetRussianName(skill);
 
         public int GetAttributeModifier(AttributeType attribute)
         {
             return attribute switch
             {
-                AttributeType.Strength => GetStrengthMod,
-                AttributeType.Dexterity => GetDexterityMod,
-                AttributeType.Constitution => GetConstitutionMod,
-                AttributeType.Intelligence => GetIntelligenceMod,
-                AttributeType.Wisdom => GetWisdomMod,
-                AttributeType.Charisma => GetCharismaMod,
+                AttributeType.BodyPower => bodyPower,
+                AttributeType.Attentiveness => attentiveness,
+                AttributeType.Nature => nature,
+                AttributeType.Trickery => trickery,
+                AttributeType.SleightOfHand => sleightOfHand,
+                AttributeType.BodyKnowledge => bodyKnowledge,
+                AttributeType.AcademicKnowledge => academicKnowledge,
+                AttributeType.Magic => magic,
                 _ => 0
             };
         }
 
-        public int GetAttributeValue(AttributeType attribute)
+        public int GetAttributeValue(AttributeType attribute) => GetAttributeModifier(attribute);
+
+        public void SetAttributeValue(AttributeType attribute, int value)
         {
-            return attribute switch
+            switch (attribute)
             {
-                AttributeType.Strength => strength,
-                AttributeType.Dexterity => dexterity,
-                AttributeType.Constitution => constitution,
-                AttributeType.Intelligence => intelligence,
-                AttributeType.Wisdom => wisdom,
-                AttributeType.Charisma => charisma,
-                _ => 10
-            };
+                case AttributeType.BodyPower: bodyPower = value; break;
+                case AttributeType.Attentiveness: attentiveness = value; break;
+                case AttributeType.Nature: nature = value; break;
+                case AttributeType.Trickery: trickery = value; break;
+                case AttributeType.SleightOfHand: sleightOfHand = value; break;
+                case AttributeType.BodyKnowledge: bodyKnowledge = value; break;
+                case AttributeType.AcademicKnowledge: academicKnowledge = value; break;
+                case AttributeType.Magic: magic = value; break;
+            }
         }
 
         public int GetSkillBonus(SkillType skillType)
         {
+            int baseMod = GetAttributeModifier((AttributeType)(int)skillType);
             var entry = skills.Find(s => s.skillType == skillType);
-            if (entry == null) return 0;
+            int profBonus = (entry != null && entry.isProficient) ? GetProficiencyBonus() : 0;
+            int miscBonus = entry != null ? entry.miscBonus : 0;
 
-            int baseMod = GetAttributeModifier(entry.GetGoverningAttribute());
-            int profBonus = entry.isProficient ? GetProficiencyBonus() : 0;
-            int expertiseBonus = entry.hasExpertise ? GetProficiencyBonus() : 0;
-
-            return baseMod + profBonus + expertiseBonus + entry.miscBonus;
+            return baseMod + profBonus + miscBonus;
         }
 
         public int GetProficiencyBonus()
         {
-            // Прогрессия бонуса мастерства: 2, 2, 2, 2, 3, 3, 3, 3, 4...
-            return 2 + (level - 1) / 4;
+            // Бонус мастерства/уровня: +1 на 1 ур., +2 на 3 ур., +3 на 5 ур.
+            return 1 + (level - 1) / 2;
         }
 
         public bool CheckSkill(SkillType skillType, int difficultyClass)
         {
-            int bonus = GetSkillBonus(skillType);
-            int roll = UnityEngine.Random.Range(1, 21); // 1-20
-            int total = roll + bonus;
-            return total >= difficultyClass;
+            return CheckSkillDetailed(skillType, difficultyClass).success;
         }
 
-        public (bool success, int roll, int total) CheckSkillDetailed(SkillType skillType, int difficultyClass)
+        /// <summary>
+        /// Проверка навыка/характеристики по правилам: 2d6 + характеристика против СЛ.
+        /// При преимуществе кидается 3d6, выбираются 2 лучших.
+        /// СЛ 5 = Лёгкая, СЛ 7 = Средняя, СЛ 9 = Сложная, СЛ 11+ = Очень сложная.
+        /// </summary>
+        public (bool success, int roll, int total) CheckSkillDetailed(SkillType skillType, int difficultyClass, bool hasAdvantage = false)
         {
             int bonus = GetSkillBonus(skillType);
-            int roll = UnityEngine.Random.Range(1, 21);
+            int roll;
+
+            if (hasAdvantage)
+            {
+                // Кидаем 3d6, выбираем 2 лучших кубика (Преимущество)
+                int d1 = UnityEngine.Random.Range(1, 7);
+                int d2 = UnityEngine.Random.Range(1, 7);
+                int d3 = UnityEngine.Random.Range(1, 7);
+                int sum = d1 + d2 + d3;
+                int minDie = Mathf.Min(d1, Mathf.Min(d2, d3));
+                roll = sum - minDie;
+            }
+            else
+            {
+                // Стандартный бросок 2d6 (от 2 до 12)
+                int d1 = UnityEngine.Random.Range(1, 7);
+                int d2 = UnityEngine.Random.Range(1, 7);
+                roll = d1 + d2;
+            }
+
             int total = roll + bonus;
             return (total >= difficultyClass, roll, total);
         }
@@ -133,10 +165,13 @@ namespace RPG.Character
 
         public void RecalculateDerivedStats()
         {
-            maxHP = 20 + (GetConstitutionMod * level);
-            maxMP = 10 + (GetIntelligenceMod * level);
-            armorClass = 10 + GetDexterityMod;
-            initiative = GetDexterityMod;
+            maxHP = 20 + (bodyPower * 5) + (bodyKnowledge * 3) + (level * 4);
+            maxMP = 10 + (magic * 5) + (academicKnowledge * 3) + (level * 3);
+            armorClass = 10 + sleightOfHand + (bodyPower > 0 ? 1 : 0);
+            initiative = attentiveness + sleightOfHand;
+            if (currentHP == 0) currentHP = maxHP; // Начальная инициализация
+            currentHP = Mathf.Clamp(currentHP, 1, maxHP);
+            currentMP = Mathf.Clamp(currentMP, 0, maxMP);
         }
 
         public bool TryLevelUp()
@@ -165,65 +200,53 @@ namespace RPG.Character
 
         public AttributeType GetGoverningAttribute()
         {
-            return skillType switch
+            return (AttributeType)(int)skillType;
+        }
+
+        public static string GetRussianName(SkillType skill)
+        {
+            return skill switch
             {
-                SkillType.Athletics => AttributeType.Strength,
-                SkillType.Acrobatics => AttributeType.Dexterity,
-                SkillType.SleightOfHand => AttributeType.Dexterity,
-                SkillType.Stealth => AttributeType.Dexterity,
-                SkillType.Arcana => AttributeType.Intelligence,
-                SkillType.History => AttributeType.Intelligence,
-                SkillType.Investigation => AttributeType.Intelligence,
-                SkillType.Nature => AttributeType.Intelligence,
-                SkillType.Religion => AttributeType.Intelligence,
-                SkillType.AnimalHandling => AttributeType.Wisdom,
-                SkillType.Insight => AttributeType.Wisdom,
-                SkillType.Medicine => AttributeType.Wisdom,
-                SkillType.Perception => AttributeType.Wisdom,
-                SkillType.Survival => AttributeType.Wisdom,
-                SkillType.Deception => AttributeType.Charisma,
-                SkillType.Intimidation => AttributeType.Charisma,
-                SkillType.Performance => AttributeType.Charisma,
-                SkillType.Persuasion => AttributeType.Charisma,
-                _ => AttributeType.Strength
+                SkillType.BodyPower => "Мощность тела",
+                SkillType.Attentiveness => "Внимательность",
+                SkillType.Nature => "Природа",
+                SkillType.Trickery => "Плутовство",
+                SkillType.SleightOfHand => "Ловкость рук",
+                SkillType.BodyKnowledge => "Знания тела",
+                SkillType.AcademicKnowledge => "Академические знания",
+                SkillType.Magic => "Магия",
+                _ => skill.ToString()
             };
         }
     }
 
+    /// <summary>
+    /// 8 основных характеристик игрока в мире Веридия
+    /// </summary>
     public enum AttributeType
     {
-        Strength,
-        Dexterity,
-        Constitution,
-        Intelligence,
-        Wisdom,
-        Charisma
+        BodyPower = 0,          // Мощность тела
+        Attentiveness = 1,      // Внимательность (восприятие + проницательность)
+        Nature = 2,             // Природа
+        Trickery = 3,           // Плутовство (скрытность + обман)
+        SleightOfHand = 4,      // Ловкость рук (воровство + взаимодействие с механизмами)
+        BodyKnowledge = 5,      // Знания тела
+        AcademicKnowledge = 6,  // Академические знания (религия, история и т.д.)
+        Magic = 7               // Магия
     }
 
+    /// <summary>
+    /// Навыки в нашей системе 1:1 соответствуют 8 основным характеристикам
+    /// </summary>
     public enum SkillType
     {
-        // Strength
-        Athletics,
-        // Dexterity
-        Acrobatics,
-        SleightOfHand,
-        Stealth,
-        // Intelligence
-        Arcana,
-        History,
-        Investigation,
-        Nature,
-        Religion,
-        // Wisdom
-        AnimalHandling,
-        Insight,
-        Medicine,
-        Perception,
-        Survival,
-        // Charisma
-        Deception,
-        Intimidation,
-        Performance,
-        Persuasion
+        BodyPower = 0,          // Мощность тела
+        Attentiveness = 1,      // Внимательность
+        Nature = 2,             // Природа
+        Trickery = 3,           // Плутовство
+        SleightOfHand = 4,      // Ловкость рук
+        BodyKnowledge = 5,      // Знания тела
+        AcademicKnowledge = 6,  // Академические знания
+        Magic = 7               // Магия
     }
 }

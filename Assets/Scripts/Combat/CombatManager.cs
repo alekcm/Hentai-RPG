@@ -63,6 +63,17 @@ namespace RPG.Combat
 
         #region Combat Lifecycle
 
+        public void StartCombat(string encounterId)
+        {
+            var encounter = new CombatEncounter
+            {
+                encounterId = encounterId,
+                environment = "dungeon",
+                isBossFight = !string.IsNullOrEmpty(encounterId) && (encounterId.Contains("boss") || encounterId.Contains("vael"))
+            };
+            StartCombat(encounter);
+        }
+
         public void StartCombat(CombatEncounter encounter)
         {
             if (isCombatActive)

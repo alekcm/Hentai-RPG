@@ -19,8 +19,27 @@ namespace RPG.Core
         [Header("Game State")]
         [SerializeField] private GameState currentState = GameState.MainMenu;
 
-        public SaveManager SaveManager => saveManager;
-        public GameEventBus EventBus => eventBus;
+        public SaveManager SaveManager
+        {
+            get
+            {
+                if (this == null || !this) return null;
+                if (saveManager == null)
+                    saveManager = SaveManager.Instance ?? FindObjectOfType<SaveManager>() ?? gameObject.GetComponent<SaveManager>() ?? gameObject.AddComponent<SaveManager>();
+                return saveManager;
+            }
+        }
+
+        public GameEventBus EventBus
+        {
+            get
+            {
+                if (this == null || !this) return null;
+                if (eventBus == null)
+                    eventBus = gameObject.GetComponent<GameEventBus>() ?? gameObject.AddComponent<GameEventBus>();
+                return eventBus;
+            }
+        }
         public GameState CurrentState => currentState;
 
         // Глобальные игровые флаги
@@ -47,7 +66,9 @@ namespace RPG.Core
             DontDestroyOnLoad(gameObject);
 
             if (eventBus == null)
-                eventBus = gameObject.AddComponent<GameEventBus>();
+                eventBus = gameObject.GetComponent<GameEventBus>() ?? gameObject.AddComponent<GameEventBus>();
+            if (saveManager == null)
+                saveManager = SaveManager.Instance ?? FindObjectOfType<SaveManager>() ?? gameObject.GetComponent<SaveManager>() ?? gameObject.AddComponent<SaveManager>();
         }
 
         private void Start()

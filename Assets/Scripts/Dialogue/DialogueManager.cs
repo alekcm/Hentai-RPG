@@ -53,6 +53,7 @@ namespace RPG.Dialogue
         private void Start()
         {
             GameManager.Instance.SaveManager.RegisterSaveable(this);
+            LoadAllDialogues();
         }
 
         #region Dialogue Lifecycle
@@ -215,6 +216,32 @@ namespace RPG.Dialogue
             PresentCurrentNode();
         }
 
+        /// <summary>
+        /// Форматирует текст под пол персонажа. Поддерживает синтаксис: {G:мужской|женский} или {G:муж|жен|другой}
+        /// Пример: "Ты был {G:прикован|прикована}." -> "Ты был прикована." (для женщины)
+        /// </summary>
+        public static string FormatGenderText(string text)
+        {
+            if (string.IsNullOrEmpty(text) || !text.Contains("{G:"))
+                return text;
+
+            var player = CharacterCreation.Instance?.Character;
+            var gender = player?.gender ?? Gender.Male;
+
+            return System.Text.RegularExpressions.Regex.Replace(text, @"\{G:([^}]+)\}", match =>
+            {
+                string content = match.Groups[1].Value;
+                string[] parts = content.Split('|');
+
+                if (gender == Gender.Female && parts.Length > 1)
+                    return parts[1];
+                if (gender == Gender.Other && parts.Length > 2)
+                    return parts[2];
+
+                return parts[0]; // Male по умолчанию
+            });
+        }
+
         private void PresentCurrentNode()
         {
             if (currentNode == null) return;
@@ -231,11 +258,51 @@ namespace RPG.Dialogue
                 GameManager.Instance.SetFlag(currentNode.questTagOnSelect);
             }
 
-            // Собираем доступные выборы
+            // Пассивная проверка при отображении реплики (стиль Pathfinder / Disco Elysium)
+            string displayedText = FormatGenderText(currentNode.text);
+            if (currentNode.passiveSkillCheck != null && currentNode.passiveSkillCheck.HasCheck)
+            {
+                var checkResult = PerformSkillCheck(currentNode.passiveSkillCheck);
+                if (checkResult.success)
+                {
+                    if (!string.IsNullOrEmpty(currentNode.passiveSuccessFlag))
+                        GameManager.Instance.SetFlag(currentNode.passiveSuccessFlag, true);
+
+                    if (!string.IsNullOrEmpty(currentNode.passiveSuccessText))
+                    {
+                        string skillName = SkillEntry.GetRussianName(currentNode.passiveSkillCheck.skillType);
+                        displayedText += $"\n\n<color=#FFD700><b>[{skillName} СЛ {currentNode.passiveSkillCheck.difficultyClass} Успех]:</b></color> {FormatGenderText(currentNode.passiveSuccessText)}";
+                    }
+                }
+                else if (!string.IsNullOrEmpty(currentNode.passiveFailureText))
+                {
+                    string skillName = SkillEntry.GetRussianName(currentNode.passiveSkillCheck.skillType);
+                    displayedText += $"\n\n<color=#888888><b>[{skillName} СЛ {currentNode.passiveSkillCheck.difficultyClass} Провал]:</b></color> {FormatGenderText(currentNode.passiveFailureText)}";
+                }
+            }
+
+            // Собираем доступные выборы (учитывая флаг успеха пассивной проверки!)
             FilterChoices();
 
+            // Создаем временную копию узла с дополненным текстом для отображения в UI
+            var presentationNode = currentNode;
+            if (displayedText != currentNode.text)
+            {
+                presentationNode = new DialogueNode
+                {
+                    nodeId = currentNode.nodeId,
+                    speakerType = currentNode.speakerType,
+                    speakerId = currentNode.speakerId,
+                    text = displayedText,
+                    choices = currentNode.choices,
+                    autoAdvanceToNodeId = currentNode.autoAdvanceToNodeId,
+                    autoAdvanceDelay = currentNode.autoAdvanceDelay,
+                    emotion = currentNode.emotion
+                };
+            }
+
             // Представляем узел UI
-            OnNodePresented?.Invoke(currentNode);
+            OnNodePresented?.Invoke(presentationNode);
 
             // Автоматическое продвижение если нет выборов
             if (currentNode.choices.Count == 0 && !currentNode.IsEndNode)
@@ -252,7 +319,11 @@ namespace RPG.Dialogue
 
         private IEnumerator AutoAdvance(float delay)
         {
-            yield return new WaitForSeconds(delay);
+            // Рассчитываем примерное время печати текста (около 0.03с на символ), чтобы игрок гарантированно успел прочитать
+            float typingTime = (currentNode?.text?.Length ?? 0) * 0.03f;
+            float totalDelay = Mathf.Max(delay, typingTime + 2.5f); // Время печати + 2.5 секунды на чтение
+
+            yield return new WaitForSeconds(totalDelay);
             if (isDialogueActive)
                 Advance();
         }
@@ -319,7 +390,8 @@ namespace RPG.Dialogue
                 if (player != null)
                 {
                     int bonus = player.stats.GetSkillBonus(choice.skillCheck.skillType);
-                    return $"[{choice.skillCheck.skillType}] SL {choice.skillCheck.difficultyClass} " +
+                    string skillName = SkillEntry.GetRussianName(choice.skillCheck.skillType);
+                    return $"[{skillName} СЛ {choice.skillCheck.difficultyClass}] " +
                            $"(ваш бонус: +{bonus})";
                 }
             }
@@ -375,8 +447,8 @@ namespace RPG.Dialogue
                 roll = roll,
                 bonus = player.stats.GetSkillBonus(check.skillType),
                 total = total,
-                isCriticalSuccess = roll == 20,
-                isCriticalFailure = roll == 1
+                isCriticalSuccess = roll == 12, // В системе 2d6 макс = 12 (две шестерки)
+                isCriticalFailure = roll == 2   // В системе 2d6 мин = 2 (две единицы)
             };
 
             // Критический успех/провал переопределяют
@@ -446,7 +518,21 @@ namespace RPG.Dialogue
                     Quest.QuestManager.Instance?.AdvanceQuest(
                         action.parameter1, action.parameter2);
                     break;
+                case DialogueActionType.StartCombat:
+                    Combat.CombatManager.Instance?.StartCombat(action.parameter1);
+                    break;
+                case DialogueActionType.StartDialogue:
+                    StartCoroutine(StartNextDialogueDelayed(action.parameter1));
+                    break;
             }
+        }
+
+        private IEnumerator StartNextDialogueDelayed(string nextDialogueId)
+        {
+            yield return new WaitForSeconds(0.5f);
+            EndDialogue();
+            yield return new WaitForSeconds(0.2f);
+            StartDialogue(nextDialogueId);
         }
 
         #endregion
@@ -547,6 +633,59 @@ namespace RPG.Dialogue
             dialogue.llmModifications.Add(mod);
 
             GameManager.Instance.EventBus.RaiseLLMDialougeModified(dialogueId);
+        }
+
+        #endregion
+
+        #region Dialogue Loading
+
+        /// <summary>
+        /// Автоматически загружает все графы диалогов из Resources/Dialogues и StreamingAssets/Dialogues
+        /// </summary>
+        public void LoadAllDialogues()
+        {
+            // 1. Загрузка из Resources/Dialogues (встроенные ассеты)
+            var resourceFiles = Resources.LoadAll<TextAsset>("Dialogues");
+            foreach (var textAsset in resourceFiles)
+            {
+                try
+                {
+                    var dialogue = JsonUtility.FromJson<DialogueGraph>(textAsset.text);
+                    if (dialogue != null && !string.IsNullOrEmpty(dialogue.dialogueId))
+                    {
+                        RegisterDialogue(dialogue);
+                        Debug.Log($"[DialogueManager] Loaded JSON from Resources: {dialogue.dialogueId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[DialogueManager] Failed to load Resources/Dialogues/{textAsset.name}: {ex.Message}");
+                }
+            }
+
+            // 2. Загрузка из StreamingAssets/Dialogues (позволяет моддинг и горячую замену без пересборки)
+            string streamingPath = System.IO.Path.Combine(Application.streamingAssetsPath, "Dialogues");
+            if (System.IO.Directory.Exists(streamingPath))
+            {
+                string[] jsonFiles = System.IO.Directory.GetFiles(streamingPath, "*.json", System.IO.SearchOption.AllDirectories);
+                foreach (string file in jsonFiles)
+                {
+                    try
+                    {
+                        string json = System.IO.File.ReadAllText(file, System.Text.Encoding.UTF8);
+                        var dialogue = JsonUtility.FromJson<DialogueGraph>(json);
+                        if (dialogue != null && !string.IsNullOrEmpty(dialogue.dialogueId))
+                        {
+                            RegisterDialogue(dialogue);
+                            Debug.Log($"[DialogueManager] Loaded JSON from StreamingAssets: {dialogue.dialogueId}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[DialogueManager] Failed to load StreamingAssets JSON {file}: {ex.Message}");
+                    }
+                }
+            }
         }
 
         #endregion

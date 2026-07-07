@@ -145,7 +145,8 @@ namespace RPG.UI
 
         private void OnInputSubmit(string text)
         {
-            if (Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.KeypadEnter))
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && (kb.enterKey.isPressed || kb.numpadEnterKey.isPressed))
             {
                 SendMessage();
             }

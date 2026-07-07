@@ -47,6 +47,16 @@ namespace RPG.UI
         private int charIndex;
         private List<GameObject> activeChoiceButtons = new();
         private DialogueManager dialogueManager;
+        private Coroutine typingCoroutine;
+        private Coroutine showChoicesCoroutine;
+        private Coroutine skillCheckCoroutine;
+
+        private void Awake()
+        {
+            EnsureDefaultUI();
+            if (dialoguePanel != null)
+                dialoguePanel.SetActive(false);
+        }
 
         private void Start()
         {
@@ -63,7 +73,152 @@ namespace RPG.UI
             dialogueManager.OnDialogueStarted += OnDialogueStarted;
             dialogueManager.OnDialogueEnded += OnDialogueEnded;
 
-            dialoguePanel.SetActive(false);
+            // Если диалог УЖЕ был запущен до выполнения Start(), подхватываем и отображаем его!
+            if (dialogueManager.IsDialogueActive && dialogueManager.CurrentNode != null)
+            {
+                dialoguePanel.SetActive(true);
+                OnNodePresented(dialogueManager.CurrentNode);
+            }
+        }
+
+        private void EnsureDefaultUI()
+        {
+            if (dialoguePanel != null && choicesPanel != null && choiceButtonPrefab != null)
+                return;
+
+            Debug.Log("[DialogueUI] Creating default UI Canvas and dark-fantasy layout dynamically...");
+
+            // 1. Создаём Canvas
+            var canvasGo = new GameObject("DialogueCanvas");
+            canvasGo.transform.SetParent(this.transform);
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 100;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            // 2. Создаём Dialogue Panel (На весь экран на время тестов: 5% - 95%)
+            var panelGo = new GameObject("DialoguePanel");
+            panelGo.transform.SetParent(canvasGo.transform, false);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.05f, 0.05f);
+            panelRect.anchorMax = new Vector2(0.95f, 0.95f);
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+            var panelImg = panelGo.AddComponent<Image>();
+            panelImg.color = new Color(0.12f, 0.12f, 0.16f, 0.95f); // Тёмно-серый фон
+            dialoguePanel = panelGo;
+
+            // 3. Создаём Имя Говорящего (Speaker Name)
+            var nameGo = new GameObject("SpeakerNameText");
+            nameGo.transform.SetParent(panelGo.transform, false);
+            var nameRect = nameGo.AddComponent<RectTransform>();
+            nameRect.anchorMin = new Vector2(0.03f, 0.92f);
+            nameRect.anchorMax = new Vector2(0.97f, 0.98f);
+            nameRect.offsetMin = Vector2.zero;
+            nameRect.offsetMax = Vector2.zero;
+            speakerNameText = nameGo.AddComponent<Text>();
+            speakerNameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (speakerNameText.font == null) speakerNameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (speakerNameText.font == null) speakerNameText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
+            speakerNameText.fontSize = 26;
+            speakerNameText.fontStyle = FontStyle.Bold;
+            speakerNameText.color = new Color(1f, 0.84f, 0f, 1f); // Золотой цвет
+            speakerNameText.alignment = TextAnchor.MiddleLeft;
+
+            // 4. Создаём Текст Диалога (Dialogue Text)
+            var textGo = new GameObject("DialogueText");
+            textGo.transform.SetParent(panelGo.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = new Vector2(0.03f, 0.45f);
+            textRect.anchorMax = new Vector2(0.97f, 0.90f);
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            dialogueText = textGo.AddComponent<Text>();
+            dialogueText.font = speakerNameText.font;
+            dialogueText.fontSize = 22;
+            dialogueText.color = Color.white;
+            dialogueText.alignment = TextAnchor.UpperLeft;
+            dialogueText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            dialogueText.verticalOverflow = VerticalWrapMode.Truncate;
+
+            // 5. Создаём Панель Выборов (Choices Panel)
+            var choicesGo = new GameObject("ChoicesPanel");
+            choicesGo.transform.SetParent(panelGo.transform, false);
+            var choicesRect = choicesGo.AddComponent<RectTransform>();
+            choicesRect.anchorMin = new Vector2(0.03f, 0.02f);
+            choicesRect.anchorMax = new Vector2(0.97f, 0.42f);
+            choicesRect.offsetMin = Vector2.zero;
+            choicesRect.offsetMax = Vector2.zero;
+            var layoutGroup = choicesGo.AddComponent<VerticalLayoutGroup>();
+            layoutGroup.spacing = 8f;
+            layoutGroup.childControlHeight = false;
+            layoutGroup.childControlWidth = true;
+            layoutGroup.childForceExpandHeight = false;
+            layoutGroup.childForceExpandWidth = true;
+            choicesPanel = choicesGo;
+
+            // 6. Создаём Шаблон Кнопки Выбора (Choice Button Prefab)
+            var btnGo = new GameObject("ChoiceButtonPrefab");
+            btnGo.transform.SetParent(canvasGo.transform, false);
+            var btnRect = btnGo.AddComponent<RectTransform>();
+            btnRect.sizeDelta = new Vector2(0, 34);
+            var btnImg = btnGo.AddComponent<Image>();
+            btnImg.color = new Color(0.22f, 0.22f, 0.28f, 1f);
+            var btn = btnGo.AddComponent<Button>();
+            var colors = btn.colors;
+            colors.highlightedColor = new Color(0.35f, 0.35f, 0.45f, 1f);
+            colors.pressedColor = new Color(0.45f, 0.45f, 0.55f, 1f);
+            btn.colors = colors;
+
+            var btnTextGo = new GameObject("Text");
+            btnTextGo.transform.SetParent(btnGo.transform, false);
+            var btnTextRect = btnTextGo.AddComponent<RectTransform>();
+            btnTextRect.anchorMin = Vector2.zero;
+            btnTextRect.anchorMax = Vector2.one;
+            btnTextRect.offsetMin = new Vector2(12, 2);
+            btnTextRect.offsetMax = new Vector2(-12, -2);
+            var btnText = btnTextGo.AddComponent<Text>();
+            btnText.font = speakerNameText.font;
+            btnText.fontSize = 17;
+            btnText.color = Color.white;
+            btnText.alignment = TextAnchor.MiddleLeft;
+
+            btnGo.SetActive(false);
+            choiceButtonPrefab = btnGo;
+
+            // 7. Создаём Панель Проверки Навыка (Skill Check Panel) - Верхняя середина экрана
+            var checkGo = new GameObject("SkillCheckPanel");
+            checkGo.transform.SetParent(canvasGo.transform, false);
+            var checkRect = checkGo.AddComponent<RectTransform>();
+            checkRect.anchorMin = new Vector2(0.25f, 0.75f);
+            checkRect.anchorMax = new Vector2(0.75f, 0.92f);
+            checkRect.offsetMin = Vector2.zero;
+            checkRect.offsetMax = Vector2.zero;
+            var checkImg = checkGo.AddComponent<Image>();
+            checkImg.color = new Color(0.08f, 0.08f, 0.12f, 0.95f); // Тёмный фон
+            var outline = checkGo.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.84f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(2, -2);
+            skillCheckPanel = checkGo;
+
+            var checkTextGo = new GameObject("SkillCheckResultText");
+            checkTextGo.transform.SetParent(checkGo.transform, false);
+            var checkTextRect = checkTextGo.AddComponent<RectTransform>();
+            checkTextRect.anchorMin = Vector2.zero;
+            checkTextRect.anchorMax = Vector2.one;
+            checkTextRect.offsetMin = new Vector2(10, 5);
+            checkTextRect.offsetMax = new Vector2(-10, -5);
+            skillCheckResultText = checkTextGo.AddComponent<Text>();
+            skillCheckResultText.font = speakerNameText.font;
+            skillCheckResultText.fontSize = 22;
+            skillCheckResultText.fontStyle = FontStyle.Bold;
+            skillCheckResultText.alignment = TextAnchor.MiddleCenter;
+            skillCheckResultText.color = Color.white;
+
+            checkGo.SetActive(false);
         }
 
         private void OnDestroy()
@@ -91,6 +246,9 @@ namespace RPG.UI
             ClearChoices();
         }
 
+        private DialogueNode previousNode;
+        private string currentBaseText = "";
+
         private void OnNodePresented(DialogueNode node)
         {
             ClearChoices();
@@ -109,11 +267,18 @@ namespace RPG.UI
                     break;
             }
 
+            // Определяем, нужно ли добавлять текст к предыдущему (если прошлый узел автоматически перешел сюда)
+            bool appendToPrevious = (previousNode != null && previousNode.choices != null && previousNode.choices.Count == 0 && !string.IsNullOrEmpty(previousNode.autoAdvanceToNodeId));
+            previousNode = node;
+
+            if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+            if (showChoicesCoroutine != null) StopCoroutine(showChoicesCoroutine);
+
             // Запускаем печать текста
-            StartCoroutine(TypeText(node.text));
+            typingCoroutine = StartCoroutine(TypeText(node.text, appendToPrevious));
 
             // Показываем выборы (после завершения печати)
-            StartCoroutine(ShowChoicesAfterTyping(node));
+            showChoicesCoroutine = StartCoroutine(ShowChoicesAfterTyping(node));
         }
 
         private void OnChoiceMade(DialogueChoice choice)
@@ -131,12 +296,24 @@ namespace RPG.UI
 
         #region Text Animation
 
-        private IEnumerator TypeText(string text)
+        private IEnumerator TypeText(string text, bool append = false)
         {
             isTyping = true;
             fullText = text;
             charIndex = 0;
-            dialogueText.text = "";
+
+            if (append && !string.IsNullOrEmpty(dialogueText.text))
+            {
+                currentBaseText = dialogueText.text + "\n\n--- ";
+                if (!string.IsNullOrEmpty(speakerNameText.text))
+                    currentBaseText += $"<b><color=#FFD700>{speakerNameText.text}:</color></b> ";
+            }
+            else
+            {
+                currentBaseText = "";
+            }
+
+            dialogueText.text = currentBaseText;
 
             while (charIndex < fullText.Length)
             {
@@ -152,8 +329,10 @@ namespace RPG.UI
         {
             if (isTyping)
             {
-                StopAllCoroutines();
-                dialogueText.text = fullText;
+                if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+                if (showChoicesCoroutine != null) StopCoroutine(showChoicesCoroutine);
+
+                dialogueText.text = currentBaseText + fullText;
                 isTyping = false;
 
                 // Показываем выборы сразу
@@ -190,13 +369,14 @@ namespace RPG.UI
                     continue;
 
                 var buttonObj = Instantiate(choiceButtonPrefab, choicesPanel.transform);
+                buttonObj.SetActive(true);
                 var buttonText = buttonObj.GetComponentInChildren<Text>();
                 var button = buttonObj.GetComponent<Button>();
 
                 bool isAvailable = dialogueManager.IsChoiceAvailable(choice);
 
-                // Форматируем текст
-                string displayText = choice.text;
+                // Форматируем текст с учетом пола
+                string displayText = DialogueManager.FormatGenderText(choice.text);
                 Color textColor = availableChoiceColor;
 
                 // Проверка навыка
@@ -283,6 +463,16 @@ namespace RPG.UI
 
         private void ShowSkillCheckResult(SkillCheckResult result)
         {
+            if (skillCheckPanel == null || skillCheckResultText == null)
+            {
+                EnsureDefaultUI();
+                if (skillCheckPanel == null || skillCheckResultText == null)
+                {
+                    Debug.LogWarning("[DialogueUI] Cannot show skill check result: skillCheckPanel is unassigned!");
+                    return;
+                }
+            }
+
             skillCheckPanel.SetActive(true);
 
             string resultText;
@@ -320,13 +510,16 @@ namespace RPG.UI
             skillCheckResultText.text = resultText;
             skillCheckResultText.color = color;
 
-            StartCoroutine(HideSkillCheckAfterDelay(2f));
+            if (skillCheckCoroutine != null) StopCoroutine(skillCheckCoroutine);
+            skillCheckCoroutine = StartCoroutine(HideSkillCheckAfterDelay(2f));
         }
 
         private IEnumerator HideSkillCheckAfterDelay(float delay)
         {
             yield return new WaitForSeconds(delay);
-            skillCheckPanel.SetActive(false);
+            if (skillCheckPanel != null)
+                skillCheckPanel.SetActive(false);
+            skillCheckCoroutine = null;
         }
 
         #endregion
@@ -335,28 +528,39 @@ namespace RPG.UI
 
         private void Update()
         {
-            if (!dialoguePanel.activeSelf) return;
+            if (dialoguePanel == null || !dialoguePanel.activeSelf) return;
+
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            bool clickOrSpace = (mouse != null && mouse.leftButton.wasPressedThisFrame) ||
+                                (kb != null && kb.spaceKey.wasPressedThisFrame);
 
             // Клик/пробел для продвижения
-            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+            if (clickOrSpace)
             {
                 if (isTyping)
                 {
                     SkipTextAnimation();
                 }
                 else if (dialogueManager.CurrentNode != null &&
-                         dialogueManager.CurrentNode.choices.Count == 0)
+                         (dialogueManager.CurrentNode.choices == null || dialogueManager.CurrentNode.choices.Count == 0))
                 {
                     dialogueManager.Advance();
                 }
             }
 
             // Цифры для быстрого выбора
-            for (int i = 0; i < 9; i++)
+            if (kb != null && dialogueManager.CurrentNode?.choices != null)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+                var digitKeys = new[]
                 {
-                    if (i < dialogueManager.CurrentNode?.choices.Count)
+                    kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key,
+                    kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key
+                };
+
+                for (int i = 0; i < Mathf.Min(9, digitKeys.Length); i++)
+                {
+                    if (digitKeys[i].wasPressedThisFrame && i < dialogueManager.CurrentNode.choices.Count)
                     {
                         var choice = dialogueManager.CurrentNode.choices[i];
                         if (dialogueManager.IsChoiceAvailable(choice))

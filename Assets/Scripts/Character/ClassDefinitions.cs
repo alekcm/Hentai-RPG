@@ -47,13 +47,13 @@ namespace RPG.Character
                     {
                         classType = ClassType.Warrior,
                         displayName = "Воин",
-                        description = "Мастер ближнего боя. Несокрушимая сила и стальная воля.",
-                        primaryAttribute = AttributeType.Strength,
-                        secondaryAttribute = AttributeType.Constitution,
+                        description = "Мастер ближнего боя. Несокрушимая мощность тела и стальная воля.",
+                        primaryAttribute = AttributeType.BodyPower,
+                        secondaryAttribute = AttributeType.BodyKnowledge,
                         hitDie = 12,
                         startingProficiencies = new() { "all_armor", "all_weapons", "shields" },
                         startingAbilities = new() { "second_wind", "action_surge" },
-                        classSkillOptions = new() { SkillType.Athletics, SkillType.Intimidation, SkillType.Perception, SkillType.Survival },
+                        classSkillOptions = new() { SkillType.BodyPower, SkillType.BodyKnowledge, SkillType.Attentiveness, SkillType.Nature },
                         skillChoicesCount = 2,
                         personalityArchetype = "Решительный защитник, предпочитает действовать, а не говорить"
                     }
@@ -63,14 +63,14 @@ namespace RPG.Character
                     {
                         classType = ClassType.Rogue,
                         displayName = "Плут",
-                        description = "Мастер теней. Скрытность, хитрость и смертоносные удары.",
-                        primaryAttribute = AttributeType.Dexterity,
-                        secondaryAttribute = AttributeType.Charisma,
+                        description = "Мастер теней. Ловкость рук, плутовство и смертоносные удары.",
+                        primaryAttribute = AttributeType.SleightOfHand,
+                        secondaryAttribute = AttributeType.Trickery,
                         hitDie = 8,
                         startingProficiencies = new() { "light_armor", "medium_armor", "simple_weapons", "thieves_tools" },
                         startingAbilities = new() { "sneak_attack", "expertise", "thieves_cant" },
-                        classSkillOptions = new() { SkillType.Stealth, SkillType.SleightOfHand, SkillType.Acrobatics, SkillType.Deception, SkillType.Investigation, SkillType.Perception },
-                        skillChoicesCount = 4,
+                        classSkillOptions = new() { SkillType.SleightOfHand, SkillType.Trickery, SkillType.Attentiveness, SkillType.AcademicKnowledge },
+                        skillChoicesCount = 3,
                         personalityArchetype = "Скрытный и расчётливый, всегда имеет план Б"
                     }
                 },
@@ -79,13 +79,13 @@ namespace RPG.Character
                     {
                         classType = ClassType.Mage,
                         displayName = "Маг",
-                        description = "Повелитель арканной магии. Знание — величайшее оружие.",
-                        primaryAttribute = AttributeType.Intelligence,
-                        secondaryAttribute = AttributeType.Wisdom,
+                        description = "Повелитель арканной магии. Академические знания и магическая сила.",
+                        primaryAttribute = AttributeType.Magic,
+                        secondaryAttribute = AttributeType.AcademicKnowledge,
                         hitDie = 6,
                         startingProficiencies = new() { "light_armor", "daggers", "staves", "arcanum" },
                         startingAbilities = new() { "spellcasting", "arcane_recovery", "ritual_casting" },
-                        classSkillOptions = new() { SkillType.Arcana, SkillType.History, SkillType.Investigation, SkillType.Insight },
+                        classSkillOptions = new() { SkillType.Magic, SkillType.AcademicKnowledge, SkillType.Attentiveness, SkillType.Trickery },
                         skillChoicesCount = 2,
                         personalityArchetype = "Любознательный учёный, ценит знания превыше всего"
                     }
@@ -95,13 +95,13 @@ namespace RPG.Character
                     {
                         classType = ClassType.Cleric,
                         displayName = "Жрец",
-                        description = "Служитель богов. Целитель и защитник веры.",
-                        primaryAttribute = AttributeType.Wisdom,
-                        secondaryAttribute = AttributeType.Charisma,
+                        description = "Бывший служитель богов. Целитель с глубокими знаниями тела.",
+                        primaryAttribute = AttributeType.Attentiveness,
+                        secondaryAttribute = AttributeType.Magic,
                         hitDie = 8,
                         startingProficiencies = new() { "light_armor", "medium_armor", "shields", "simple_weapons" },
                         startingAbilities = new() { "divine_spellcasting", "channel_divinity", "turn_undead" },
-                        classSkillOptions = new() { SkillType.Medicine, SkillType.Religion, SkillType.Insight, SkillType.Persuasion },
+                        classSkillOptions = new() { SkillType.Attentiveness, SkillType.BodyKnowledge, SkillType.AcademicKnowledge, SkillType.Magic },
                         skillChoicesCount = 2,
                         personalityArchetype = "Сострадательный, но непреклонный в своих убеждениях"
                     }
@@ -112,12 +112,12 @@ namespace RPG.Character
                         classType = ClassType.Druid,
                         displayName = "Друид",
                         description = "Хранитель природы. Оборотень и повелитель стихий.",
-                        primaryAttribute = AttributeType.Wisdom,
-                        secondaryAttribute = AttributeType.Constitution,
+                        primaryAttribute = AttributeType.Nature,
+                        secondaryAttribute = AttributeType.Magic,
                         hitDie = 8,
                         startingProficiencies = new() { "light_armor", "medium_armor", "shields", "druidic_focus" },
                         startingAbilities = new() { "wild_shape", "druidic_spellcasting", "druidic_language" },
-                        classSkillOptions = new() { SkillType.Nature, SkillType.AnimalHandling, SkillType.Survival, SkillType.Perception, SkillType.Medicine },
+                        classSkillOptions = new() { SkillType.Nature, SkillType.Magic, SkillType.Attentiveness, SkillType.BodyKnowledge },
                         skillChoicesCount = 2,
                         personalityArchetype = "Связан с природой, терпелив, но опасен когда разгневан"
                     }
@@ -127,13 +127,13 @@ namespace RPG.Character
                     {
                         classType = ClassType.Bard,
                         displayName = "Бард",
-                        description = "Мастер слова и музыки. Вдохновитель и обманщик.",
-                        primaryAttribute = AttributeType.Charisma,
-                        secondaryAttribute = AttributeType.Dexterity,
+                        description = "Мастер слова и музыки. Плутовство и вдохновение.",
+                        primaryAttribute = AttributeType.Trickery,
+                        secondaryAttribute = AttributeType.SleightOfHand,
                         hitDie = 8,
                         startingProficiencies = new() { "light_armor", "simple_weapons", "musical_instruments" },
                         startingAbilities = new() { "bardic_inspiration", "spellcasting", "jack_of_all_trades" },
-                        classSkillOptions = new() { SkillType.Performance, SkillType.Persuasion, SkillType.Deception, SkillType.Acrobatics, SkillType.Insight, SkillType.Intimidation },
+                        classSkillOptions = new() { SkillType.Trickery, SkillType.SleightOfHand, SkillType.AcademicKnowledge, SkillType.Attentiveness },
                         skillChoicesCount = 3,
                         personalityArchetype = "Обаятельный болтун, всегда готов к флирту и приключениям"
                     }

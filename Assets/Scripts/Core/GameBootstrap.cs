@@ -61,6 +61,12 @@ namespace RPG.Core
                 GameManager.Instance.SetGameState(GameState.CharacterCreation);
             }
 
+            // Автоматически запускаем тестовый модуль диалогов, если включен режим отладки
+            if (enableDebugMode && FindObjectOfType<DialogueTestRunner>() == null)
+            {
+                gameObject.AddComponent<DialogueTestRunner>();
+            }
+
             Debug.Log("[GameBootstrap] Game initialized successfully!");
         }
 
@@ -123,12 +129,12 @@ namespace RPG.Core
                            "было уничтожено таинственным культом.",
                 stats = new CharacterStats
                 {
-                    strength = 12,
-                    dexterity = 18,
-                    constitution = 14,
-                    intelligence = 14,
-                    wisdom = 12,
-                    charisma = 16,
+                    sleightOfHand = 2,
+                    trickery = 2,
+                    attentiveness = 1,
+                    academicKnowledge = 1,
+                    bodyPower = 0,
+                    bodyKnowledge = 1,
                     level = 3
                 },
                 nsfwPreferences = "Доминирование, бондаж, ролевые игры. " +
@@ -184,12 +190,12 @@ namespace RPG.Core
                            "Ищет способ доказать свою силу и вернуть честь.",
                 stats = new CharacterStats
                 {
-                    strength = 18,
-                    dexterity = 12,
-                    constitution = 16,
-                    intelligence = 8,
-                    wisdom = 10,
-                    charisma = 10,
+                    bodyPower = 2,
+                    bodyKnowledge = 2,
+                    nature = 1,
+                    attentiveness = 0,
+                    trickery = -1,
+                    academicKnowledge = -1,
                     level = 3
                 },
                 nsfwPreferences = "Грубый и страстный стиль. Предпочитает доминировать физически. " +
@@ -364,8 +370,8 @@ namespace RPG.Core
                                 questTag = "stealth_approach",
                                 skillCheck = new SkillCheckData
                                 {
-                                    skillType = SkillType.Stealth,
-                                    difficultyClass = 15
+                                    skillType = SkillType.Trickery,
+                                    difficultyClass = 7
                                 }
                             },
                             new DialogueChoice
@@ -515,8 +521,8 @@ namespace RPG.Core
                                 questTag = "stealth_approach",
                                 skillCheck = new SkillCheckData
                                 {
-                                    skillType = SkillType.Persuasion,
-                                    difficultyClass = 20,
+                                    skillType = SkillType.Attentiveness,
+                                    difficultyClass = 9,
                                     successNodeId = "patience_success",
                                     failureNodeId = "patience_fail"
                                 },

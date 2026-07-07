@@ -12,9 +12,9 @@ namespace RPG.Character
         public static CharacterCreation Instance { get; private set; }
 
         [Header("Creation Settings")]
-        [SerializeField] private int totalAttributePoints = 27;
-        [SerializeField] private int minAttribute = 8;
-        [SerializeField] private int maxAttribute = 15;
+        [SerializeField] private int totalAttributePoints = 2;
+        [SerializeField] private int minAttribute = -1;
+        [SerializeField] private int maxAttribute = 2;
         [SerializeField] private int skillProficiencyPoints = 2;
 
         private PlayerCharacter character;
@@ -88,30 +88,10 @@ namespace RPG.Character
             var raceDef = RaceDatabase.GetRace(character.race);
             if (raceDef == null) return;
 
-            // Сначала сбрасываем к базовым
-            foreach (var bonus in raceDef.attributeBonuses)
+            foreach (AttributeType attr in Enum.GetValues(typeof(AttributeType)))
             {
-                switch (bonus.Key)
-                {
-                    case AttributeType.Strength:
-                        character.stats.strength = 10 + bonus.Value;
-                        break;
-                    case AttributeType.Dexterity:
-                        character.stats.dexterity = 10 + bonus.Value;
-                        break;
-                    case AttributeType.Constitution:
-                        character.stats.constitution = 10 + bonus.Value;
-                        break;
-                    case AttributeType.Intelligence:
-                        character.stats.intelligence = 10 + bonus.Value;
-                        break;
-                    case AttributeType.Wisdom:
-                        character.stats.wisdom = 10 + bonus.Value;
-                        break;
-                    case AttributeType.Charisma:
-                        character.stats.charisma = 10 + bonus.Value;
-                        break;
-                }
+                int bonus = raceDef.attributeBonuses.TryGetValue(attr, out int val) ? val : 0;
+                character.stats.SetAttributeValue(attr, bonus);
             }
         }
 
@@ -147,15 +127,16 @@ namespace RPG.Character
         #region Attribute Distribution
 
         /// <summary>
-        /// Point-buy система: 8=0 очков, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9
+        /// Point-buy система Веридии: -1 = -1 очко, 0 = 0 очков, +1 = 1 очко, +2 = 2 очка, +3 = 4 очка
         /// </summary>
         public int GetPointCost(int attributeValue)
         {
-            if (attributeValue < minAttribute) return 0;
-            if (attributeValue <= 13) return attributeValue - 8;
-            if (attributeValue == 14) return 7;
-            if (attributeValue == 15) return 9;
-            return int.MaxValue;
+            if (attributeValue == -1) return -1;
+            if (attributeValue == 0) return 0;
+            if (attributeValue == 1) return 1;
+            if (attributeValue == 2) return 2;
+            if (attributeValue == 3) return 4;
+            return 0;
         }
 
         public bool SetAttribute(AttributeType attribute, int value)
@@ -163,44 +144,16 @@ namespace RPG.Character
             if (value < minAttribute || value > maxAttribute)
                 return false;
 
-            // Вычисляем текущую стоимость
             int currentCost = CalculateCurrentAttributeCost();
-            int currentAttrValue = character.stats.GetAttributeValue(attribute);
+            int currentVal = character.stats.GetAttributeValue(attribute) - GetRaceBonus(attribute);
 
-            // Убираем стоимость текущего значения
-            int removeCost = GetPointCost(currentAttrValue);
-            currentCost -= removeCost;
-
-            // Добавляем стоимость нового значения
-            int addCost = GetPointCost(value);
-            currentCost += addCost;
+            currentCost -= GetPointCost(currentVal);
+            currentCost += GetPointCost(value);
 
             if (currentCost > totalAttributePoints)
                 return false;
 
-            // Применяем
-            switch (attribute)
-            {
-                case AttributeType.Strength:
-                    character.stats.strength = value + GetRaceBonus(AttributeType.Strength);
-                    break;
-                case AttributeType.Dexterity:
-                    character.stats.dexterity = value + GetRaceBonus(AttributeType.Dexterity);
-                    break;
-                case AttributeType.Constitution:
-                    character.stats.constitution = value + GetRaceBonus(AttributeType.Constitution);
-                    break;
-                case AttributeType.Intelligence:
-                    character.stats.intelligence = value + GetRaceBonus(AttributeType.Intelligence);
-                    break;
-                case AttributeType.Wisdom:
-                    character.stats.wisdom = value + GetRaceBonus(AttributeType.Wisdom);
-                    break;
-                case AttributeType.Charisma:
-                    character.stats.charisma = value + GetRaceBonus(AttributeType.Charisma);
-                    break;
-            }
-
+            character.stats.SetAttributeValue(attribute, value + GetRaceBonus(attribute));
             spentPoints = currentCost;
             character.stats.RecalculateDerivedStats();
             return true;
@@ -216,12 +169,11 @@ namespace RPG.Character
         private int CalculateCurrentAttributeCost()
         {
             int cost = 0;
-            cost += GetPointCost(character.stats.strength - GetRaceBonus(AttributeType.Strength));
-            cost += GetPointCost(character.stats.dexterity - GetRaceBonus(AttributeType.Dexterity));
-            cost += GetPointCost(character.stats.constitution - GetRaceBonus(AttributeType.Constitution));
-            cost += GetPointCost(character.stats.intelligence - GetRaceBonus(AttributeType.Intelligence));
-            cost += GetPointCost(character.stats.wisdom - GetRaceBonus(AttributeType.Wisdom));
-            cost += GetPointCost(character.stats.charisma - GetRaceBonus(AttributeType.Charisma));
+            foreach (AttributeType attr in Enum.GetValues(typeof(AttributeType)))
+            {
+                int baseVal = character.stats.GetAttributeValue(attr) - GetRaceBonus(attr);
+                cost += GetPointCost(baseVal);
+            }
             return cost;
         }
 
