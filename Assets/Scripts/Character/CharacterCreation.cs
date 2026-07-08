@@ -1,37 +1,50 @@
 using UnityEngine;
 using System;
+using System.Linq;
 using System.Collections.Generic;
+using RPG.Domains;
+using RPG.Items;
 
 namespace RPG.Character
 {
     /// <summary>
-    /// Контроллер создания персонажа. Управляет UI и валидацией.
+    /// Создание персонажа по ГДД.
+    /// Порядок шагов:
+    ///   1. Имя, пол.
+    ///   2. Раса (Человек / Эльф / Тифлинг).
+    ///   3. Класс (Воин / Плут / Волшебник / Друид / Священник).
+    ///   4. Подкласс класса.
+    ///   5. Распределение навыков: +2, +1, +1, -1, остальные 0.
+    ///   6. Выбор первого домена (из стартовых для класса) и второго (любой).
+    ///   7. Выбор 2 стартовых карт из 6 доступных (3 карты каждого выбранного домена).
+    ///   8. FinalizeCharacter().
     /// </summary>
     public class CharacterCreation : MonoBehaviour
     {
         public static CharacterCreation Instance { get; private set; }
 
-        [Header("Creation Settings")]
-        [SerializeField] private int totalAttributePoints = 2;
-        [SerializeField] private int minAttribute = -1;
-        [SerializeField] private int maxAttribute = 2;
-        [SerializeField] private int skillProficiencyPoints = 2;
+        [Header("Правила распределения навыков (по ГДД)")]
+        [SerializeField] private int slotsAtPlusTwo  = 1;
+        [SerializeField] private int slotsAtPlusOne  = 2;
+        [SerializeField] private int slotsAtMinusOne = 1;
+
+        [SerializeField] private int startingDomainCards = 2;
 
         private PlayerCharacter character;
-        private int spentPoints = 0;
-        private int selectedProficiencies = 0;
+        private Dictionary<SkillType, int> skillAssignments = new();
 
         public PlayerCharacter Character => character;
-        public int RemainingPoints => totalAttributePoints - spentPoints;
-        public int RemainingProficiencies => skillProficiencyPoints - selectedProficiencies;
+
+        public int RequiredPlusTwo  => slotsAtPlusTwo;
+        public int RequiredPlusOne  => slotsAtPlusOne;
+        public int RequiredMinusOne => slotsAtMinusOne;
+
+        public int RemainingCardPicks =>
+            Mathf.Max(0, startingDomainCards - character.knownDomainCards.Count);
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
         }
 
@@ -39,181 +52,161 @@ namespace RPG.Character
         {
             RaceDatabase.Initialize();
             ClassDatabase.Initialize();
+            DomainDatabase.Initialize();
+            ItemDatabase.Initialize();
             ResetCreation();
         }
 
         public void ResetCreation()
         {
-            character = new PlayerCharacter
-            {
-                characterId = "player",
-                stats = new CharacterStats()
-            };
-            spentPoints = 0;
-            selectedProficiencies = 0;
+            character = new PlayerCharacter { characterId = "player" };
+            skillAssignments.Clear();
+            foreach (SkillType s in Enum.GetValues(typeof(SkillType)))
+                skillAssignments[s] = 0;
+            SyncSkillsIntoStats();
         }
 
-        #region Name & Gender
-
+        // ---------- 1. Имя, пол ----------
         public void SetName(string name)
         {
             character.playerName = name;
             character.displayName = name;
         }
+        public void SetGender(Gender g) => character.gender = g;
 
-        public void SetGender(Gender gender)
+        // ---------- 2. Раса ----------
+        public bool SelectRace(RaceType race)
         {
-            character.gender = gender;
-        }
-
-        #endregion
-
-        #region Race Selection
-
-        public bool SelectRace(RaceType raceType)
-        {
-            var raceDef = RaceDatabase.GetRace(raceType);
-            if (raceDef == null) return false;
-
-            character.race = raceType;
-
-            // Применяем расовые бонусы к базовым статам
-            ApplyRaceBonuses();
-
+            if (!RaceDatabase.PlayableRaces.Contains(race)) return false;
+            character.race = race;
             return true;
         }
 
-        private void ApplyRaceBonuses()
+        // ---------- 3. Класс ----------
+        public bool SelectClass(ClassType cls)
         {
-            var raceDef = RaceDatabase.GetRace(character.race);
-            if (raceDef == null) return;
-
-            foreach (AttributeType attr in Enum.GetValues(typeof(AttributeType)))
-            {
-                int bonus = raceDef.attributeBonuses.TryGetValue(attr, out int val) ? val : 0;
-                character.stats.SetAttributeValue(attr, bonus);
-            }
-        }
-
-        #endregion
-
-        #region Class Selection
-
-        public bool SelectClass(ClassType classType)
-        {
-            var classDef = ClassDatabase.GetClass(classType);
-            if (classDef == null) return false;
-
-            character.characterClass = classType;
-            character.knownAbilities.Clear();
-            character.knownAbilities.AddRange(classDef.startingAbilities);
-
-            // Устанавливаем навыки класса
-            character.stats.skills.Clear();
-            foreach (var skill in classDef.classSkillOptions)
-            {
-                character.stats.skills.Add(new SkillEntry
-                {
-                    skillType = skill,
-                    isProficient = false
-                });
-            }
-
+            if (!ClassDatabase.PlayableClasses.Contains(cls)) return false;
+            character.characterClass = cls;
+            character.subclassId = null;
+            character.chosenDomains.Clear();
+            character.knownDomainCards.Clear();
+            var def = ClassDatabase.GetClass(cls);
+            character.stats.evasion = def.baseEvasion;
             return true;
         }
 
-        #endregion
-
-        #region Attribute Distribution
-
-        /// <summary>
-        /// Point-buy система Веридии: -1 = -1 очко, 0 = 0 очков, +1 = 1 очко, +2 = 2 очка, +3 = 4 очка
-        /// </summary>
-        public int GetPointCost(int attributeValue)
+        // ---------- 4. Подкласс ----------
+        public bool SelectSubclass(string subclassId)
         {
-            if (attributeValue == -1) return -1;
-            if (attributeValue == 0) return 0;
-            if (attributeValue == 1) return 1;
-            if (attributeValue == 2) return 2;
-            if (attributeValue == 3) return 4;
-            return 0;
-        }
-
-        public bool SetAttribute(AttributeType attribute, int value)
-        {
-            if (value < minAttribute || value > maxAttribute)
-                return false;
-
-            int currentCost = CalculateCurrentAttributeCost();
-            int currentVal = character.stats.GetAttributeValue(attribute) - GetRaceBonus(attribute);
-
-            currentCost -= GetPointCost(currentVal);
-            currentCost += GetPointCost(value);
-
-            if (currentCost > totalAttributePoints)
-                return false;
-
-            character.stats.SetAttributeValue(attribute, value + GetRaceBonus(attribute));
-            spentPoints = currentCost;
-            character.stats.RecalculateDerivedStats();
+            var cls = ClassDatabase.GetClass(character.characterClass);
+            if (cls == null) return false;
+            if (!cls.subclasses.Any(s => s.subclassId == subclassId)) return false;
+            character.subclassId = subclassId;
             return true;
         }
 
-        private int GetRaceBonus(AttributeType attribute)
+        // ---------- 5. Навыки ----------
+
+        /// <summary>Устанавливает значение бонуса навыка (в -1 / 0 / +1 / +2). Возвращает false, если превышена квота ГДД.</summary>
+        public bool SetSkill(SkillType skill, int value)
         {
-            var raceDef = RaceDatabase.GetRace(character.race);
-            if (raceDef == null) return 0;
-            return raceDef.attributeBonuses.TryGetValue(attribute, out int bonus) ? bonus : 0;
+            if (value != -1 && value != 0 && value != 1 && value != 2) return false;
+
+            var snapshot = new Dictionary<SkillType, int>(skillAssignments);
+            snapshot[skill] = value;
+
+            int plusTwo  = snapshot.Values.Count(v => v == 2);
+            int plusOne  = snapshot.Values.Count(v => v == 1);
+            int minusOne = snapshot.Values.Count(v => v == -1);
+
+            if (plusTwo  > slotsAtPlusTwo)  return false;
+            if (plusOne  > slotsAtPlusOne)  return false;
+            if (minusOne > slotsAtMinusOne) return false;
+
+            skillAssignments = snapshot;
+            SyncSkillsIntoStats();
+            return true;
         }
 
-        private int CalculateCurrentAttributeCost()
+        public int GetSkill(SkillType skill) => skillAssignments.TryGetValue(skill, out var v) ? v : 0;
+
+        public bool IsSkillDistributionComplete()
         {
-            int cost = 0;
-            foreach (AttributeType attr in Enum.GetValues(typeof(AttributeType)))
-            {
-                int baseVal = character.stats.GetAttributeValue(attr) - GetRaceBonus(attr);
-                cost += GetPointCost(baseVal);
-            }
-            return cost;
+            int plusTwo  = skillAssignments.Values.Count(v => v == 2);
+            int plusOne  = skillAssignments.Values.Count(v => v == 1);
+            int minusOne = skillAssignments.Values.Count(v => v == -1);
+            return plusTwo == slotsAtPlusTwo && plusOne == slotsAtPlusOne && minusOne == slotsAtMinusOne;
         }
 
-        #endregion
-
-        #region Skill Proficiencies
-
-        public bool ToggleSkillProficiency(SkillType skill)
+        private void SyncSkillsIntoStats()
         {
-            var entry = character.stats.skills.Find(s => s.skillType == skill);
-            if (entry == null) return false;
+            foreach (var kv in skillAssignments)
+                character.stats.SetSkillBonus(kv.Key, kv.Value);
+        }
 
-            if (entry.isProficient)
+        // ---------- 6. Домены ----------
+
+        /// <summary>Первый домен — обязательно из starterDomains класса.</summary>
+        public bool SelectFirstDomain(DomainType d)
+        {
+            var cls = ClassDatabase.GetClass(character.characterClass);
+            if (cls == null) return false;
+            if (!cls.starterDomains.Contains(d)) return false;
+            if (character.chosenDomains.Count == 0) character.chosenDomains.Add(d);
+            else character.chosenDomains[0] = d;
+            character.knownDomainCards.Clear();
+            return true;
+        }
+
+        /// <summary>Второй домен — любой из 8, кроме первого.</summary>
+        public bool SelectSecondDomain(DomainType d)
+        {
+            if (character.chosenDomains.Count == 0) return false;
+            if (character.chosenDomains[0] == d) return false;
+            if (character.chosenDomains.Count == 1) character.chosenDomains.Add(d);
+            else character.chosenDomains[1] = d;
+            character.knownDomainCards.Clear();
+            return true;
+        }
+
+        // ---------- 7. Карты доменов ----------
+
+        public List<DomainCard> GetAvailableCards()
+        {
+            var result = new List<DomainCard>();
+            foreach (var d in character.chosenDomains)
+                result.AddRange(DomainDatabase.GetCardsForDomain(d));
+            return result;
+        }
+
+        public bool ToggleCard(string cardId)
+        {
+            if (character.knownDomainCards.Contains(cardId))
             {
-                entry.isProficient = false;
-                selectedProficiencies--;
+                character.knownDomainCards.Remove(cardId);
                 return true;
             }
-            else
-            {
-                if (selectedProficiencies >= skillProficiencyPoints)
-                    return false;
-                entry.isProficient = true;
-                selectedProficiencies++;
-                return true;
-            }
+            if (character.knownDomainCards.Count >= startingDomainCards) return false;
+
+            var card = DomainDatabase.GetCard(cardId);
+            if (card == null) return false;
+            if (!character.chosenDomains.Contains(card.domain)) return false;
+
+            character.knownDomainCards.Add(cardId);
+            return true;
         }
 
-        #endregion
-
-        #region Finalization
+        // ---------- 8. Финализация ----------
 
         public bool CanFinalize()
         {
-            if (string.IsNullOrEmpty(character.playerName))
-                return false;
-            if (character.race == default && !Enum.IsDefined(typeof(RaceType), character.race))
-                return false;
-            if (character.characterClass == default && !Enum.IsDefined(typeof(ClassType), character.characterClass))
-                return false;
+            if (string.IsNullOrEmpty(character.playerName)) return false;
+            if (!RaceDatabase.PlayableRaces.Contains(character.race)) return false;
+            if (!ClassDatabase.PlayableClasses.Contains(character.characterClass)) return false;
+            if (string.IsNullOrEmpty(character.subclassId)) return false;
+            if (!IsSkillDistributionComplete()) return false;
+            if (character.chosenDomains.Count != 2) return false;
+            if (character.knownDomainCards.Count != startingDomainCards) return false;
             return true;
         }
 
@@ -225,16 +218,42 @@ namespace RPG.Character
                 return null;
             }
 
+            // Стартовое снаряжение — из класса.
+            var cls = ClassDatabase.GetClass(character.characterClass);
+            foreach (var itemId in cls.startingEquipment)
+            {
+                character.AddItem(itemId);
+                var item = ItemDatabase.GetItem(itemId);
+                if (item is WeaponDefinition w)
+                {
+                    if (w.slot == WeaponSlot.Main) character.equippedMainWeaponId = itemId;
+                    else                            character.equippedOffhandId  = itemId;
+                }
+                else if (item is ArmorDefinition)
+                {
+                    character.equippedArmorId = itemId;
+                }
+            }
+
+            // Применяем броню к статам.
+            ItemDatabase.ApplyEquippedGear(character);
+
+            // Раса — пассивные особенности (например, +1 к макс. Выносливости у человека).
             character.Initialize();
-            character.stats.currentHP = character.stats.maxHP;
-            character.stats.currentMP = character.stats.maxMP;
 
-            Debug.Log($"[CharacterCreation] Character created: {character.playerName} " +
-                      $"({character.race} {character.characterClass})");
+            // На старте — полный запас Выносливости и целые шкалы здоровья.
+            character.stats.ResetArmorAtCombatStart();
+            character.stats.ResetStaminaAtCombatStart();
+            character.stats.currentSlotHp = character.stats.hpPerSlot;
+            character.stats.usedHealthSlots = 0;
 
+            Debug.Log($"[CharacterCreation] Готов: {character.playerName} " +
+                      $"({character.race}/{character.characterClass}/{character.subclassId}) " +
+                      $"HP шкал {character.stats.maxHealthSlots}×{character.stats.hpPerSlot}, " +
+                      $"броня {character.stats.maxArmorSlots} (DT {character.stats.damageThreshold}), " +
+                      $"Уклонение {character.stats.evasion}, " +
+                      $"Выносливость {character.stats.currentStamina}/{character.stats.maxStamina}");
             return character;
         }
-
-        #endregion
     }
 }

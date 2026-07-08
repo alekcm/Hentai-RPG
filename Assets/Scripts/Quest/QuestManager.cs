@@ -273,12 +273,8 @@ namespace RPG.Quest
                 switch (reward.rewardType)
                 {
                     case RewardType.Experience:
-                        var player = Character.CharacterCreation.Instance?.Character;
-                        if (player != null)
-                        {
-                            player.stats.experience += reward.intValue;
-                            GameManager.Instance.EventBus.RaiseExperienceGained("player", reward.intValue);
-                        }
+                        // По ГДД классической XP-прогрессии нет; событие всё равно шлём (для UI/логов).
+                        GameManager.Instance.EventBus.RaiseExperienceGained("player", reward.intValue);
                         break;
 
                     case RewardType.Gold:

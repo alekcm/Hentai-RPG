@@ -1,58 +1,79 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RPG.Core;
 using RPG.Character;
+using RPG.Domains;
+using RPG.Items;
+using RPG.Companion;
 
 namespace RPG.Combat
 {
     /// <summary>
-    /// Тактическая пошаговая боевая система в стиле Baldur's Gate / Divinity.
-    /// Управляет ходами, действиями, AI врагов.
+    /// Пошаговый бой по правилам ГДД.
+    /// Основные принципы:
+    ///  — Игрок и союзники бросают Кости Дуальности (2d12): Hope die vs Fear die + бонус навыка.
+    ///    Успех = total >= сложность. Если Hope > Fear → успех/провал "с Надеждой" (даёт +1 в пул).
+    ///    Если Fear > Hope → "со Страхом" (даёт +1 Страха врагам).
+    ///    Hope == Fear → критический успех (+1 Надежда и +1 Выносливость активирующему юниту).
+    ///    Преимущество/помеха — ±d6 к сумме.
+    ///  — Враги бросают d20 без Дуальности.
+    ///  — Действие юнита: переместиться до 6 клеток и совершить Действие (Атака / Заклинание / Способность / Короткая передышка).
+    ///  — Если бросок успешен и с Надеждой — сторона игрока продолжает активировать других юнитов.
+    ///    Иначе ход переходит противнику, и противник ходит столько же раз, сколько ходила сторона игрока в этой связке.
+    ///  — Урон идёт по броне: rawDamage vs DamageThreshold. Не пробили → 0. Пробили → ломается ячейка брони,
+    ///    остаток = rawDamage - hpPerSlot по здоровью.
+    ///  — В начале каждого боя броня и Выносливость всех юнитов восстанавливаются, HP не меняется.
+    ///  — Все траты Надежды/Выносливости идут через отдельный подтверждающий UI (см. AbilityConfirmDialog).
     /// </summary>
     public class CombatManager : MonoBehaviour, ISaveable
     {
         public static CombatManager Instance { get; private set; }
 
         [Header("Grid Settings")]
-        [SerializeField] private int gridWidth = 20;
-        [SerializeField] private int gridHeight = 20;
-        [SerializeField] private float tileSize = 1f;
+        [SerializeField] private int gridWidth = 16;
+        [SerializeField] private int gridHeight = 12;
 
-        [Header("Combat Settings")]
-        [SerializeField] private float actionPointBase = 4f;
-        [SerializeField] private float movementCostPerTile = 1f;
-        [SerializeField] private float attackActionCost = 2f;
-        [SerializeField] private float spellActionCost = 2f;
+        [Header("Movement")]
+        [SerializeField] private int baseMovementTiles = 6;
 
-        // Состояние боя
+        // --- Состояние боя ---
         private bool isCombatActive;
         private List<CombatUnit> allUnits = new();
-        private List<CombatUnit> turnOrder = new();
-        private int currentTurnIndex = -1;
-        private CombatUnit currentUnit;
-        private int roundNumber;
+        private int hopePool;
+        private int fearPool;
+        private CombatSide activeSide = CombatSide.Player;
+
+        /// <summary>Сколько подряд активировала текущая сторона в этой "связке" ходов.</summary>
+        private int consecutiveActivationsThisPass;
+
+        /// <summary>Юниты, уже активировавшиеся в этом раунде на своей стороне.</summary>
+        private HashSet<string> activatedThisRound = new();
+
+        /// <summary>Ждём выбор игрока: какой юнит активировать / какое действие выполнить.</summary>
+        private CombatUnit selectedUnit;
 
         public bool IsCombatActive => isCombatActive;
-        public CombatUnit CurrentUnit => currentUnit;
-        public int RoundNumber => roundNumber;
+        public int HopePool => hopePool;
+        public int FearPool => fearPool;
+        public CombatSide ActiveSide => activeSide;
+        public IReadOnlyList<CombatUnit> AllUnits => allUnits;
+        public CombatUnit SelectedUnit => selectedUnit;
 
         public string SaveKey => "CombatManager";
 
+        // --- События (для UI/логов) ---
         public event Action OnCombatStart;
-        public event Action<bool> OnCombatEnd; // true = победа игрока
-        public event Action<CombatUnit> OnTurnStart;
-        public event Action<CombatUnit> OnTurnEnd;
-        public event Action<CombatAction, CombatActionResult> OnActionPerformed;
-        public event Action<CombatUnit> OnUnitDied;
+        public event Action<bool> OnCombatEnd;                              // true = победа игрока
+        public event Action<CombatUnit> OnUnitActivated;
+        public event Action<CombatSide> OnTurnPassedToSide;
+        public event Action<CombatLogEntry> OnCombatEvent;
+        public event Action OnResourcesChanged;                             // Hope/Fear pools
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
         }
 
@@ -61,774 +82,591 @@ namespace RPG.Combat
             GameManager.Instance.SaveManager.RegisterSaveable(this);
         }
 
-        #region Combat Lifecycle
+        // ============================================================
+        //  Запуск боя
+        // ============================================================
 
+        /// <summary>Запустить бой по id энкаунтера, найдя его в StreamingAssets/Encounters/&lt;id&gt;.json.</summary>
         public void StartCombat(string encounterId)
         {
-            var encounter = new CombatEncounter
+            if (string.IsNullOrEmpty(encounterId))
             {
-                encounterId = encounterId,
-                environment = "dungeon",
-                isBossFight = !string.IsNullOrEmpty(encounterId) && (encounterId.Contains("boss") || encounterId.Contains("vael"))
-            };
-            StartCombat(encounter);
+                Debug.LogError("[Combat] Пустой encounterId");
+                return;
+            }
+            var enc = EncounterLoader.Load(encounterId);
+            if (enc == null)
+            {
+                Debug.LogError($"[Combat] Не найден энкаунтер: {encounterId}");
+                return;
+            }
+            StartCombat(enc);
         }
 
         public void StartCombat(CombatEncounter encounter)
         {
-            if (isCombatActive)
-            {
-                Debug.LogWarning("[Combat] Combat already active");
-                return;
-            }
+            if (isCombatActive) { Debug.LogWarning("[Combat] Already active"); return; }
+            if (encounter == null) { Debug.LogError("[Combat] Encounter is null"); return; }
 
             allUnits.Clear();
-            turnOrder.Clear();
-            roundNumber = 0;
+            activatedThisRound.Clear();
+            hopePool = 2;               // Стартовые 2 Надежды по ГДД (одна на игрока для маневра)
+            fearPool = 1;               // Небольшой стартовый пул Страха
+            activeSide = CombatSide.Player;
+            consecutiveActivationsThisPass = 0;
 
-            // Добавляем игрока и партию
-            var playerChar = CharacterCreation.Instance?.Character;
-            if (playerChar != null)
+            // --- Игрок ---
+            var player = CharacterCreation.Instance?.Character;
+            if (player != null)
             {
-                var playerUnit = CreateUnitFromCharacter(playerChar, true, false);
-                allUnits.Add(playerUnit);
+                var u = CreateUnitFromCharacter(player, CombatSide.Player);
+                u.gridPosition = new Vector2Int(2, gridHeight / 2);
+                allUnits.Add(u);
             }
 
-            // Добавляем компаньонов
-            var companions = Companion.CompanionManager.Instance.GetPartyMembers();
-            foreach (var companion in companions)
+            // --- Компаньоны (пока не участвуют в r2, но система готова) ---
+            var companions = CompanionManager.Instance?.GetPartyMembers();
+            if (companions != null)
             {
-                var unit = CreateUnitFromCompanion(companion);
-                allUnits.Add(unit);
+                int i = 0;
+                foreach (var c in companions)
+                {
+                    var u = CreateUnitFromCompanion(c);
+                    u.gridPosition = new Vector2Int(1, gridHeight / 2 + (i - 1));
+                    allUnits.Add(u);
+                    i++;
+                }
             }
 
-            // Добавляем врагов
-            foreach (var enemy in encounter.enemies)
+            // --- Враги ---
+            foreach (var e in encounter.enemies)
             {
-                var unit = CreateUnitFromEnemy(enemy);
-                allUnits.Add(unit);
+                var u = CreateUnitFromEnemy(e);
+                allUnits.Add(u);
             }
 
-            // Определяем порядок ходов (инициатива)
-            DetermineTurnOrder();
+            // Стартовые ресурсы каждого юнита.
+            foreach (var u in allUnits)
+            {
+                u.stats.ResetArmorAtCombatStart();
+                u.stats.ResetStaminaAtCombatStart();
+            }
 
             isCombatActive = true;
             GameManager.Instance.SetGameState(GameState.Combat);
             GameManager.Instance.EventBus.RaiseCombatStarted();
             OnCombatStart?.Invoke();
-
-            // Начинаем первый раунд
-            StartNextRound();
+            Log(new CombatLogEntry { kind = CombatLogKind.System, message = $"Начался бой: {encounter.encounterId}." });
+            OnTurnPassedToSide?.Invoke(activeSide);
         }
 
-        public void EndCombat(bool playerVictory)
-        {
-            isCombatActive = false;
-
-            if (playerVictory)
-            {
-                // Выдаём опыт
-                GrantExperience();
-                // Собираем лут
-                CollectLoot();
-            }
-
-            // Очищаем боевое состояние
-            foreach (var unit in allUnits)
-            {
-                if (unit.isPlayerControlled && unit.character != null)
-                {
-                    // Синхронизируем HP обратно
-                    unit.character.stats.currentHP = unit.currentHP;
-                    unit.character.stats.currentMP = unit.currentMP;
-                }
-            }
-
-            allUnits.Clear();
-            turnOrder.Clear();
-            currentUnit = null;
-
-            GameManager.Instance.SetGameState(GameState.Exploration);
-            GameManager.Instance.EventBus.RaiseCombatEnded(playerVictory);
-            OnCombatEnd?.Invoke(playerVictory);
-        }
-
-        #endregion
-
-        #region Turn Management
-
-        private void DetermineTurnOrder()
-        {
-            // Инициатива = d20 + DEX модификатор
-            foreach (var unit in allUnits)
-            {
-                if (!unit.isDead)
-                {
-                    unit.initiative = UnityEngine.Random.Range(1, 21) + unit.dexterityMod;
-                    turnOrder.Add(unit);
-                }
-            }
-
-            turnOrder.Sort((a, b) => b.initiative.CompareTo(a.initiative));
-        }
-
-        private void StartNextRound()
-        {
-            roundNumber++;
-            currentTurnIndex = -1;
-            AdvanceTurn();
-        }
-
-        public void AdvanceTurn()
+        public void EndCombat(bool playerWon)
         {
             if (!isCombatActive) return;
+            isCombatActive = false;
+            GameManager.Instance.EventBus.RaiseCombatEnded(playerWon);
+            OnCombatEnd?.Invoke(playerWon);
+            GameManager.Instance.SetGameState(GameState.Dialogue);
+            Log(new CombatLogEntry { kind = CombatLogKind.System, message = playerWon ? "Победа." : "Поражение." });
+        }
 
-            // Конец хода текущего
-            if (currentUnit != null)
+        // ============================================================
+        //  Активация юнитов
+        // ============================================================
+
+        /// <summary>Игрок вручную активирует своего юнита (клик по портрету).</summary>
+        public bool ActivatePlayerUnit(string unitId)
+        {
+            if (!isCombatActive || activeSide != CombatSide.Player) return false;
+            var u = allUnits.Find(x => x.unitId == unitId && x.side == CombatSide.Player && !x.IsDead);
+            if (u == null) return false;
+            if (activatedThisRound.Contains(u.unitId)) return false;
+            selectedUnit = u;
+            OnUnitActivated?.Invoke(u);
+            return true;
+        }
+
+        private CombatUnit PickAIActivation()
+        {
+            // Простейший AI: любой ещё не активированный враг, живой.
+            return allUnits.FirstOrDefault(u => u.side == CombatSide.Enemy && !u.IsDead
+                                             && !activatedThisRound.Contains(u.unitId));
+        }
+
+        // ============================================================
+        //  Действия
+        // ============================================================
+
+        /// <summary>Игрок или AI пытается атаковать цель. Возвращает результат — попал/нет, урон и т.д.</summary>
+        public AttackResult PerformAttack(CombatUnit attacker, CombatUnit target)
+        {
+            if (attacker == null || target == null || target.IsDead)
+                return new AttackResult { message = "Некорректная цель." };
+
+            var weapon = ItemDatabase.GetWeapon(attacker.character?.equippedMainWeaponId)
+                         ?? attacker.fallbackWeapon;
+            if (weapon == null)
+                return new AttackResult { message = $"У {attacker.displayName} нет оружия." };
+
+            int distance = ManhattanDistance(attacker.gridPosition, target.gridPosition);
+            int reach = RangeInfo.Tiles(weapon.range);
+            if (distance > reach)
+                return new AttackResult { message = $"Цель слишком далеко ({distance} > {reach})." };
+
+            // --- Бросок попадания ---
+            RollOutcome roll;
+            if (attacker.side == CombatSide.Player)
             {
-                currentUnit.TickEffects();
-                OnTurnEnd?.Invoke(currentUnit);
+                roll = RollDuality(attacker.stats.GetSkillBonus(weapon.attackSkill) + weapon.attackRollBonus);
             }
-
-            currentTurnIndex++;
-
-            // Пропускаем мёртвых
-            while (currentTurnIndex < turnOrder.Count &&
-                   (turnOrder[currentTurnIndex].isDead || turnOrder[currentTurnIndex].isStunned))
+            else
             {
-                currentTurnIndex++;
-            }
-
-            // Конец раунда
-            if (currentTurnIndex >= turnOrder.Count)
-            {
-                // Проверяем условия победы/поражения
-                if (CheckVictoryCondition())
+                // Враги — d20.
+                int d = UnityEngine.Random.Range(1, 21);
+                roll = new RollOutcome
                 {
-                    EndCombat(true);
-                    return;
-                }
-                if (CheckDefeatCondition())
-                {
-                    EndCombat(false);
-                    return;
-                }
-
-                StartNextRound();
-                return;
+                    isDuality = false,
+                    total = d + attacker.enemyAttackBonus,
+                    hopeDie = 0, fearDie = 0
+                };
             }
 
-            currentUnit = turnOrder[currentTurnIndex];
-            currentUnit.currentActionPoints = currentUnit.maxActionPoints;
-            currentUnit.hasMoved = false;
-
-            OnTurnStart?.Invoke(currentUnit);
-
-            // Если ход AI
-            if (!currentUnit.isPlayerControlled && !currentUnit.isDead)
+            bool hit = roll.total >= target.stats.evasion;
+            var result = new AttackResult
             {
-                ProcessAITurn(currentUnit);
-            }
-        }
+                attacker = attacker,
+                target = target,
+                roll = roll,
+                requiredEvasion = target.stats.evasion,
+                hit = hit
+            };
 
-        private bool CheckVictoryCondition()
-        {
-            return allUnits.FindAll(u => !u.isPlayerControlled).TrueForAll(u => u.isDead);
-        }
+            if (roll.isDuality)
+                ApplyDualityResourceGain(roll, attacker);
 
-        private bool CheckDefeatCondition()
-        {
-            return allUnits.FindAll(u => u.isPlayerControlled).TrueForAll(u => u.isDead);
-        }
-
-        #endregion
-
-        #region Actions
-
-        public CombatActionResult PerformAction(CombatAction action)
-        {
-            if (!isCombatActive || currentUnit == null)
-                return new CombatActionResult { success = false, message = "Нет активного хода" };
-
-            if (currentUnit != action.performer)
-                return new CombatActionResult { success = false, message = "Сейчас не ваш ход" };
-
-            if (currentUnit.currentActionPoints < action.actionPointCost)
-                return new CombatActionResult { success = false, message = "Недостаточно очков действий" };
-
-            var result = action.Execute();
-
-            // Тратим AP
-            currentUnit.currentActionPoints -= action.actionPointCost;
-
-            OnActionPerformed?.Invoke(action, result);
-            GameManager.Instance.EventBus.RaiseDamageDealt(
-                action.target?.unitId ?? "", result.damageDealt);
-
-            // Проверяем смерть
-            if (action.target != null && action.target.isDead)
+            if (!hit)
             {
-                OnUnitDied?.Invoke(action.target);
-                GameManager.Instance.EventBus.RaiseCharacterDied(action.target.unitId);
+                result.message = $"{attacker.displayName} промахивается по {target.displayName} " +
+                                 $"({FormatRoll(roll)} < Уклонение {target.stats.evasion}).";
+                Log(new CombatLogEntry { kind = CombatLogKind.Attack, message = result.message });
+                return result;
             }
 
-            // Проверяем конец боя
-            if (CheckVictoryCondition())
+            // --- Урон ---
+            int raw = RollDamage(weapon.damageDice);
+            // Оффхенд-бонус "Малый кинжал" — +2 если цель вплотную.
+            if (attacker.side == CombatSide.Player)
             {
-                EndCombat(true);
+                var off = ItemDatabase.GetWeapon(attacker.character?.equippedOffhandId);
+                if (off != null && off.itemId == "weapon_small_dagger_off" && distance <= 1)
+                    raw += 2;
             }
-            else if (CheckDefeatCondition())
+            var dmg = target.stats.TakeDamage(raw);
+            result.rawDamage = raw;
+            result.damage = dmg;
+
+            string dmgText = dmg.blockedByThreshold
+                ? $"броня удержала удар (сырой урон {raw} < DT {target.stats.damageThreshold})."
+                : $"нанесено {dmg.hpDamageDealt} урона" +
+                  (dmg.armorSlotBroken ? " (сломана ячейка брони)" : "") +
+                  (dmg.healthSlotsBroken > 0 ? $", шкал здоровья сломано: {dmg.healthSlotsBroken}" : "");
+            result.message = $"{attacker.displayName} попадает по {target.displayName}: {dmgText}";
+            Log(new CombatLogEntry { kind = CombatLogKind.Attack, message = result.message });
+
+            // Импульс: если враг попал по игроку — +1 Страх.
+            if (attacker.side == CombatSide.Enemy && target.side == CombatSide.Player)
             {
-                EndCombat(false);
+                fearPool++;
+                OnResourcesChanged?.Invoke();
+            }
+
+            if (!target.stats.IsAlive)
+            {
+                target.MarkDead();
+                Log(new CombatLogEntry { kind = CombatLogKind.System, message = $"{target.displayName} повержен." });
+                CheckCombatEnd();
             }
 
             return result;
         }
 
-        /// <summary>
-        /// Атака ближнего боя
-        /// </summary>
-        public CombatActionResult MeleeAttack(CombatUnit attacker, CombatUnit target)
+        /// <summary>Короткая Передышка — восстанавливает Выносливость юнита.</summary>
+        public ShortRestResult PerformShortRest(CombatUnit unit)
         {
-            var action = new CombatAction
-            {
-                performer = attacker,
-                target = target,
-                actionType = CombatActionType.MeleeAttack,
-                actionPointCost = attackActionCost
-            };
-            action.Execute = () =>
-            {
-                int attackRoll = UnityEngine.Random.Range(1, 21);
-                int attackBonus = attacker.strengthMod + attacker.proficiencyBonus;
-                int totalAttack = attackRoll + attackBonus;
+            var roll = unit.side == CombatSide.Player
+                ? RollDuality(0)
+                : new RollOutcome { total = UnityEngine.Random.Range(1, 21), isDuality = false };
 
-                if (attackRoll == 1) // Критический промах
-                    return new CombatActionResult { success = false, message = "Критический промах!" };
+            unit.stats.RestoreStamina(1);
+            var res = new ShortRestResult { unit = unit, roll = roll };
 
-                if (attackRoll == 20 || totalAttack >= target.armorClass) // Критический удар или попадание
+            if (roll.isDuality)
+            {
+                if (roll.HopeSide)
                 {
-                    int damage = CalculateDamage(attacker, target, attackRoll == 20);
-                    target.currentHP = Mathf.Max(0, target.currentHP - damage);
-
-                    if (target.currentHP <= 0)
-                        target.isDead = true;
-
-                    return new CombatActionResult
-                    {
-                        success = true,
-                        damageDealt = damage,
-                        isCritical = attackRoll == 20,
-                        message = attackRoll == 20 ?
-                            $"Критический удар! {damage} урона!" :
-                            $"Попадание! {damage} урона."
-                    };
+                    // Не тратит ход, но и Надежду не даёт (см. ГДД).
+                    res.consumesAction = false;
+                    res.message = $"{unit.displayName} переводит дыхание — Выносливость +1, ход остаётся.";
                 }
-
-                return new CombatActionResult { success = false, message = "Промах!" };
-            };
-
-            return PerformAction(action);
-        }
-
-        /// <summary>
-        /// Магическая атака
-        /// </summary>
-        public CombatActionResult CastSpell(CombatUnit caster, CombatUnit target, SpellDefinition spell)
-        {
-            if (caster.currentMP < spell.mpCost)
-                return new CombatActionResult { success = false, message = "Недостаточно маны" };
-
-            var action = new CombatAction
-            {
-                performer = caster,
-                target = target,
-                actionType = CombatActionType.Spell,
-                actionPointCost = spellActionCost
-            };
-            action.Execute = () =>
-            {
-                caster.currentMP -= spell.mpCost;
-
-                // Проверка спасброска если нужно
-                if (spell.requiresSave)
+                else
                 {
-                    int saveRoll = UnityEngine.Random.Range(1, 21) + target.GetSaveBonus(spell.saveType);
-                    if (saveRoll >= spell.saveDC)
-                    {
-                        // Успешный спасбросок - половина урона
-                        int halfDamage = spell.baseDamage / 2;
-                        target.currentHP = Mathf.Max(0, target.currentHP - halfDamage);
-                        if (target.currentHP <= 0) target.isDead = true;
-                        return new CombatActionResult
-                        {
-                            success = true,
-                            damageDealt = halfDamage,
-                            message = $"Спасбросок успешен! {halfDamage} урона."
-                        };
-                    }
+                    res.consumesAction = true;
+                    fearPool++;
+                    OnResourcesChanged?.Invoke();
+                    res.message = $"{unit.displayName} тратит выносливость, но передаёт ход (враг получает +1 Страх).";
                 }
-
-                // Бросок атаки заклинанием
-                int spellAttackRoll = UnityEngine.Random.Range(1, 21);
-                int spellBonus = caster.GetIntelligenceMod() + caster.proficiencyBonus;
-
-                if (spellAttackRoll == 20 || (spellAttackRoll + spellBonus) >= target.armorClass)
-                {
-                    int damage = spell.baseDamage +
-                                 (spellAttackRoll == 20 ? spell.baseDamage : 0);
-                    target.currentHP = Mathf.Max(0, target.currentHP - damage);
-                    if (target.currentHP <= 0) target.isDead = true;
-
-                    // Применяем эффект
-                    if (spell.appliedEffect != null)
-                        target.ApplyEffect(spell.appliedEffect);
-
-                    return new CombatActionResult
-                    {
-                        success = true,
-                        damageDealt = damage,
-                        isCritical = spellAttackRoll == 20,
-                        message = $"{spell.displayName}: {damage} урона!"
-                    };
-                }
-
-                return new CombatActionResult { success = false, message = "Заклинание не попало!" };
-            };
-
-            return PerformAction(action);
-        }
-
-        /// <summary>
-        /// Перемещение юнита
-        /// </summary>
-        public CombatActionResult MoveUnit(CombatUnit unit, Vector2Int targetPosition)
-        {
-            int distance = Math.Abs(targetPosition.x - unit.gridPosition.x) +
-                          Math.Abs(targetPosition.y - unit.gridPosition.y);
-            float moveCost = distance * movementCostPerTile;
-
-            if (unit.currentActionPoints < moveCost)
-                return new CombatActionResult { success = false, message = "Недостаточно AP" };
-
-            if (unit.hasMoved && moveCost > 0)
-                return new CombatActionResult { success = false, message = "Уже перемещались" };
-
-            // Проверяем, свободна ли клетка
-            if (IsTileOccupied(targetPosition))
-                return new CombatActionResult { success = false, message = "Клетка занята" };
-
-            unit.currentActionPoints -= moveCost;
-            unit.gridPosition = targetPosition;
-            unit.hasMoved = true;
-
-            // Проверяем атаки возможности
-            CheckOpportunityAttacks(unit);
-
-            return new CombatActionResult { success = true, message = "Перемещение завершено" };
-        }
-
-        /// <summary>
-        /// Конец хода
-        /// </summary>
-        public void EndTurn()
-        {
-            if (!isCombatActive) return;
-            AdvanceTurn();
-        }
-
-        private int CalculateDamage(CombatUnit attacker, CombatUnit target, bool isCritical)
-        {
-            // Базовый урон от оружия + модификатор силы
-            int baseDamage = attacker.weaponDamage + attacker.strengthMod;
-            if (isCritical) baseDamage *= 2;
-
-            // Снижение от брони (упрощённо)
-            int effectiveDamage = Mathf.Max(1, baseDamage);
-            return effectiveDamage;
-        }
-
-        private void CheckOpportunityAttacks(CombatUnit movingUnit)
-        {
-            // Упрощённо: враги рядом могут атаковать
-            foreach (var unit in allUnits)
-            {
-                if (unit.isDead || unit.isPlayerControlled == movingUnit.isPlayerControlled)
-                    continue;
-
-                int distance = Math.Abs(unit.gridPosition.x - movingUnit.gridPosition.x) +
-                              Math.Abs(unit.gridPosition.y - movingUnit.gridPosition.y);
-
-                if (distance <= 1)
-                {
-                    // Атака возможности (с штрафом)
-                    int attackRoll = UnityEngine.Random.Range(1, 21);
-                    if (attackRoll + unit.strengthMod >= movingUnit.armorClass)
-                    {
-                        int damage = Mathf.Max(1, unit.weaponDamage + unit.strengthMod - 2);
-                        movingUnit.currentHP -= damage;
-                        if (movingUnit.currentHP <= 0) movingUnit.isDead = true;
-                    }
-                }
-            }
-        }
-
-        private bool IsTileOccupied(Vector2Int position)
-        {
-            return allUnits.Exists(u => !u.isDead && u.gridPosition == position);
-        }
-
-        #endregion
-
-        #region AI
-
-        private void ProcessAITurn(CombatUnit aiUnit)
-        {
-            StartCoroutine(ProcessAITurnCoroutine(aiUnit));
-        }
-
-        private System.Collections.IEnumerator ProcessAITurnCoroutine(CombatUnit aiUnit)
-        {
-            yield return new WaitForSeconds(0.5f);
-
-            // Простой AI: найти ближайшую цель, подойти, атаковать
-            var targets = allUnits.FindAll(u => u.isPlayerControlled && !u.isDead);
-            if (targets.Count == 0)
-            {
-                EndTurn();
-                yield break;
-            }
-
-            // Находим ближайшую цель
-            CombatUnit closestTarget = null;
-            float closestDist = float.MaxValue;
-            foreach (var target in targets)
-            {
-                float dist = Vector2.Distance(
-                    (Vector2)aiUnit.gridPosition,
-                    (Vector2)target.gridPosition);
-                if (dist < closestDist)
-                {
-                    closestDist = dist;
-                    closestTarget = target;
-                }
-            }
-
-            if (closestTarget == null)
-            {
-                EndTurn();
-                yield break;
-            }
-
-            // Если достаточно близко - атакуем
-            if (closestDist <= 1.5f)
-            {
-                MeleeAttack(aiUnit, closestTarget);
-                yield return new WaitForSeconds(0.3f);
             }
             else
             {
-                // Двигаемся к цели
-                Vector2Int moveTarget = GetAdjacentTile(closestTarget.gridPosition);
-                if (moveTarget != aiUnit.gridPosition)
-                {
-                    MoveUnit(aiUnit, moveTarget);
-                    yield return new WaitForSeconds(0.3f);
+                res.consumesAction = true;
+                res.message = $"{unit.displayName} переводит дыхание.";
+            }
 
-                    // Пробуем атаковать если остались AP
-                    if (aiUnit.currentActionPoints >= attackActionCost)
+            Log(new CombatLogEntry { kind = CombatLogKind.System, message = res.message });
+            return res;
+        }
+
+        /// <summary>Игрок отмечает завершение действий юнита.</summary>
+        public void FinishUnitTurn(CombatUnit unit, bool successfulHopeRoll)
+        {
+            if (unit == null) return;
+            activatedThisRound.Add(unit.unitId);
+            unit.hasMovedThisTurn = false;
+            selectedUnit = null;
+
+            consecutiveActivationsThisPass++;
+
+            // Игрок сохраняет ход, если успех с Надеждой; иначе передаёт.
+            bool keepSide = activeSide == CombatSide.Player && successfulHopeRoll;
+            if (!keepSide) PassTurnToOtherSide();
+            else Log(new CombatLogEntry { kind = CombatLogKind.System, message = $"{unit.displayName} — успех с Надеждой, ход продолжается." });
+        }
+
+        private void PassTurnToOtherSide()
+        {
+            int allowedActivations = consecutiveActivationsThisPass;
+            var previousSide = activeSide;
+            activeSide = activeSide == CombatSide.Player ? CombatSide.Enemy : CombatSide.Player;
+            consecutiveActivationsThisPass = 0;
+
+            // Проверяем, все ли на этой (уходящей) стороне уже активированы — если да, сбрасываем счётчик раунда для неё.
+            var thisSideUnits = allUnits.Where(u => u.side == previousSide && !u.IsDead).ToList();
+            if (thisSideUnits.All(u => activatedThisRound.Contains(u.unitId)))
+                foreach (var u in thisSideUnits) activatedThisRound.Remove(u.unitId);
+
+            OnTurnPassedToSide?.Invoke(activeSide);
+            Log(new CombatLogEntry { kind = CombatLogKind.System,
+                message = $"Ход переходит: {activeSide}. Разрешено активаций: {allowedActivations}." });
+
+            if (activeSide == CombatSide.Enemy)
+                RunAI(allowedActivations);
+        }
+
+        /// <summary>Простой AI: активирует до N врагов подряд, каждый идёт к ближайшей цели и атакует.</summary>
+        private void RunAI(int activations)
+        {
+            for (int i = 0; i < activations; i++)
+            {
+                var u = PickAIActivation();
+                if (u == null) break;
+                OnUnitActivated?.Invoke(u);
+
+                var target = allUnits
+                    .Where(x => x.side == CombatSide.Player && !x.IsDead)
+                    .OrderBy(x => ManhattanDistance(x.gridPosition, u.gridPosition))
+                    .FirstOrDefault();
+
+                if (target != null)
+                {
+                    // Двинемся к цели в пределах baseMovementTiles.
+                    var toTarget = target.gridPosition - u.gridPosition;
+                    int stepX = Mathf.Clamp(toTarget.x, -baseMovementTiles, baseMovementTiles);
+                    int stepY = Mathf.Clamp(toTarget.y, -baseMovementTiles, baseMovementTiles);
+                    int budget = baseMovementTiles;
+                    int dx = Mathf.Abs(stepX), dy = Mathf.Abs(stepY);
+                    if (dx + dy > budget)
                     {
-                        float newDist = Vector2.Distance(
-                            (Vector2)aiUnit.gridPosition,
-                            (Vector2)closestTarget.gridPosition);
-                        if (newDist <= 1.5f)
-                        {
-                            MeleeAttack(aiUnit, closestTarget);
-                            yield return new WaitForSeconds(0.3f);
-                        }
+                        // Урезаем шаг, чтобы уложиться в бюджет.
+                        float k = (float)budget / (dx + dy);
+                        stepX = Mathf.RoundToInt(stepX * k);
+                        stepY = Mathf.RoundToInt(stepY * k);
                     }
+                    u.gridPosition += new Vector2Int(stepX, stepY);
+
+                    PerformAttack(u, target);
                 }
+
+                activatedThisRound.Add(u.unitId);
+                if (!isCombatActive) return;
             }
 
-            EndTurn();
+            // После действий AI ход возвращается игроку.
+            var previousSide = activeSide;
+            activeSide = CombatSide.Player;
+            consecutiveActivationsThisPass = 0;
+
+            var enemies = allUnits.Where(x => x.side == previousSide && !x.IsDead).ToList();
+            if (enemies.All(x => activatedThisRound.Contains(x.unitId)))
+                foreach (var x in enemies) activatedThisRound.Remove(x.unitId);
+
+            OnTurnPassedToSide?.Invoke(activeSide);
         }
 
-        private Vector2Int GetAdjacentTile(Vector2Int target)
-        {
-            Vector2Int[] offsets = {
-                new(1, 0), new(-1, 0), new(0, 1), new(0, -1)
-            };
+        // ============================================================
+        //  Броски и ресурсы
+        // ============================================================
 
-            foreach (var offset in offsets)
+        public RollOutcome RollDuality(int bonus, bool advantage = false, bool disadvantage = false)
+        {
+            int hope = UnityEngine.Random.Range(1, 13);
+            int fear = UnityEngine.Random.Range(1, 13);
+            int mod = 0;
+            if (advantage && !disadvantage) mod += UnityEngine.Random.Range(1, 7);
+            else if (disadvantage && !advantage) mod -= UnityEngine.Random.Range(1, 7);
+            return new RollOutcome
             {
-                Vector2Int tile = target + offset;
-                if (!IsTileOccupied(tile) && IsInBounds(tile))
-                    return tile;
-            }
-            return target;
+                isDuality = true,
+                hopeDie = hope,
+                fearDie = fear,
+                total = hope + fear + bonus + mod
+            };
         }
 
-        private bool IsInBounds(Vector2Int pos)
+        /// <summary>После броска Дуальности — начисляем Надежду или Страх согласно ГДД.</summary>
+        public void ApplyDualityResourceGain(RollOutcome roll, CombatUnit source)
         {
-            return pos.x >= 0 && pos.x < gridWidth && pos.y >= 0 && pos.y < gridHeight;
+            if (!roll.isDuality) return;
+            if (roll.hopeDie == roll.fearDie)
+            {
+                // Критический успех: +1 Надежды и +1 Выносливости источнику.
+                hopePool++;
+                source?.stats.RestoreStamina(1);
+                Log(new CombatLogEntry { kind = CombatLogKind.System, message = $"Крит! +1 Надежда, +1 Выносливость {source?.displayName}." });
+            }
+            else if (roll.hopeDie > roll.fearDie)
+            {
+                hopePool++;
+            }
+            else
+            {
+                fearPool++;
+            }
+            OnResourcesChanged?.Invoke();
         }
 
-        #endregion
+        public bool TrySpendHope(int amount = 1)
+        {
+            if (hopePool < amount) return false;
+            hopePool -= amount;
+            OnResourcesChanged?.Invoke();
+            return true;
+        }
 
-        #region Unit Creation
+        public bool TrySpendFear(int amount = 1)
+        {
+            if (fearPool < amount) return false;
+            fearPool -= amount;
+            OnResourcesChanged?.Invoke();
+            return true;
+        }
 
-        private CombatUnit CreateUnitFromCharacter(PlayerCharacter character, bool isPlayer, bool isCompanion)
+        public void RefundHope(int amount = 1)
+        {
+            hopePool += amount;
+            OnResourcesChanged?.Invoke();
+        }
+
+        // ============================================================
+        //  Утилиты
+        // ============================================================
+
+        public int RollDamage(string dice)
+        {
+            // Формат: [N]d<sides>[+X].
+            if (string.IsNullOrEmpty(dice)) return 0;
+            dice = dice.ToLower().Replace(" ", "");
+            int plus = 0;
+            int plusIdx = dice.IndexOf('+');
+            if (plusIdx > 0)
+            {
+                int.TryParse(dice.Substring(plusIdx + 1), out plus);
+                dice = dice.Substring(0, plusIdx);
+            }
+            int dIdx = dice.IndexOf('d');
+            if (dIdx < 0) { int.TryParse(dice, out var flat); return flat + plus; }
+            int count = 1;
+            if (dIdx > 0) int.TryParse(dice.Substring(0, dIdx), out count);
+            int.TryParse(dice.Substring(dIdx + 1), out var sides);
+            if (sides <= 0) return plus;
+            int sum = 0;
+            for (int i = 0; i < Mathf.Max(1, count); i++) sum += UnityEngine.Random.Range(1, sides + 1);
+            return sum + plus;
+        }
+
+        public static int ManhattanDistance(Vector2Int a, Vector2Int b)
+            => Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+
+        private void CheckCombatEnd()
+        {
+            bool anyPlayer = allUnits.Any(u => u.side == CombatSide.Player && !u.IsDead);
+            bool anyEnemy  = allUnits.Any(u => u.side == CombatSide.Enemy  && !u.IsDead);
+            if (!anyEnemy) EndCombat(true);
+            else if (!anyPlayer) EndCombat(false);
+        }
+
+        private string FormatRoll(RollOutcome r)
+        {
+            if (r.isDuality)
+                return $"[H{r.hopeDie} F{r.fearDie}] Итог {r.total}";
+            return $"d20 → {r.total}";
+        }
+
+        private void Log(CombatLogEntry entry)
+        {
+            OnCombatEvent?.Invoke(entry);
+            Debug.Log($"[Combat/{entry.kind}] {entry.message}");
+        }
+
+        // ============================================================
+        //  Создание юнитов
+        // ============================================================
+
+        private CombatUnit CreateUnitFromCharacter(PlayerCharacter c, CombatSide side)
         {
             return new CombatUnit
             {
-                unitId = character.characterId,
-                displayName = character.displayName,
-                isPlayerControlled = true,
-                character = character,
-                currentHP = character.stats.currentHP,
-                maxHP = character.stats.maxHP,
-                currentMP = character.stats.currentMP,
-                maxMP = character.stats.maxMP,
-                armorClass = character.stats.armorClass,
-                strengthMod = character.stats.GetStrengthMod,
-                dexterityMod = character.stats.GetDexterityMod,
-                constitutionMod = character.stats.GetConstitutionMod,
-                proficiencyBonus = character.stats.GetProficiencyBonus(),
-                weaponDamage = 6, // базовый d6
-                maxActionPoints = actionPointBase,
-                currentActionPoints = actionPointBase,
-                gridPosition = Vector2Int.zero
-            };
-        }
-
-        private CombatUnit CreateUnitFromCompanion(Companion.CompanionData companion)
-        {
-            return new CombatUnit
-            {
-                unitId = companion.companionId,
-                displayName = companion.displayName,
-                isPlayerControlled = true,
-                currentHP = companion.stats?.currentHP ?? 20,
-                maxHP = companion.stats?.maxHP ?? 20,
-                currentMP = companion.stats?.currentMP ?? 10,
-                maxMP = companion.stats?.maxMP ?? 10,
-                armorClass = companion.stats?.armorClass ?? 12,
-                strengthMod = companion.stats?.GetStrengthMod ?? 0,
-                dexterityMod = companion.stats?.GetDexterityMod ?? 0,
-                constitutionMod = companion.stats?.GetConstitutionMod ?? 0,
-                proficiencyBonus = companion.stats?.GetProficiencyBonus() ?? 2,
-                weaponDamage = 6,
-                maxActionPoints = actionPointBase,
-                currentActionPoints = actionPointBase,
-                gridPosition = Vector2Int.zero
-            };
-        }
-
-        private CombatUnit CreateUnitFromEnemy(EnemyDefinition enemy)
-        {
-            return new CombatUnit
-            {
-                unitId = enemy.enemyId + "_" + Guid.NewGuid().ToString().Substring(0, 4),
-                displayName = enemy.displayName,
-                isPlayerControlled = false,
-                currentHP = enemy.maxHP,
-                maxHP = enemy.maxHP,
-                armorClass = enemy.armorClass,
-                strengthMod = enemy.strengthMod,
-                dexterityMod = enemy.dexterityMod,
-                constitutionMod = enemy.constitutionMod,
-                proficiencyBonus = enemy.proficiencyBonus,
-                weaponDamage = enemy.weaponDamage,
-                maxActionPoints = actionPointBase,
-                currentActionPoints = actionPointBase,
-                experienceValue = enemy.experienceValue,
-                gridPosition = enemy.spawnPosition
-            };
-        }
-
-        #endregion
-
-        #region Post-Combat
-
-        private void GrantExperience()
-        {
-            int totalExp = 0;
-            foreach (var unit in allUnits)
-            {
-                if (!unit.isPlayerControlled)
-                    totalExp += unit.experienceValue;
-            }
-
-            var player = CharacterCreation.Instance?.Character;
-            if (player != null)
-            {
-                player.stats.experience += totalExp;
-                GameManager.Instance.EventBus.RaiseExperienceGained("player", totalExp);
-
-                if (player.stats.TryLevelUp())
-                    GameManager.Instance.EventBus.RaiseLevelUp("player", player.stats.level);
-            }
-        }
-
-        private void CollectLoot()
-        {
-            // TODO: система лута
-        }
-
-        #endregion
-
-        #region Save/Load
-
-        public string OnSave()
-        {
-            // Сохраняем только если бой активен
-            if (!isCombatActive) return "{}";
-
-            var data = new CombatSaveData
-            {
-                isActive = true,
-                roundNumber = roundNumber,
-                currentTurnIndex = currentTurnIndex,
-                units = new()
-            };
-
-            foreach (var unit in allUnits)
-            {
-                data.units.Add(new CombatUnitSaveData
+                unitId = c.characterId ?? "player",
+                displayName = c.displayName ?? c.playerName ?? "Игрок",
+                side = side,
+                character = c,
+                stats = c.stats,
+                fallbackWeapon = new WeaponDefinition
                 {
-                    unitId = unit.unitId,
-                    currentHP = unit.currentHP,
-                    currentMP = unit.currentMP,
-                    gridPosition = unit.gridPosition,
-                    isDead = unit.isDead,
-                    initiative = unit.initiative
-                });
-            }
-
-            return JsonUtility.ToJson(data);
+                    itemId = "unarmed",
+                    displayName = "Кулаки",
+                    attackSkill = SkillType.BodyPower,
+                    range = WeaponRange.Melee,
+                    damageDice = "d4"
+                }
+            };
         }
 
-        public void OnLoad(string json)
+        private CombatUnit CreateUnitFromCompanion(CompanionData c)
         {
-            var data = JsonUtility.FromJson<CombatSaveData>(json);
-            if (data == null || !data.isActive) return;
-            // Восстановление боя - TODO: полная реализация
+            return new CombatUnit
+            {
+                unitId = c.companionId,
+                displayName = c.displayName,
+                side = CombatSide.Player,
+                stats = c.stats ?? new CharacterStats { evasion = 10, maxHealthSlots = 6, hpPerSlot = 6, currentSlotHp = 6, maxStamina = 1, currentStamina = 1 },
+                fallbackWeapon = new WeaponDefinition
+                {
+                    itemId = "companion_default",
+                    displayName = "Оружие спутника",
+                    attackSkill = SkillType.BodyPower,
+                    range = WeaponRange.Melee,
+                    damageDice = "d6+1"
+                }
+            };
         }
 
-        #endregion
+        private CombatUnit CreateUnitFromEnemy(EnemyDefinition e)
+        {
+            var stats = new CharacterStats
+            {
+                maxHealthSlots  = e.healthSlots,
+                usedHealthSlots = 0,
+                hpPerSlot       = e.hpPerSlot,
+                currentSlotHp   = e.hpPerSlot,
+                maxArmorSlots   = e.armorSlots,
+                damageThreshold = e.damageThreshold,
+                armorRating     = e.armorRating,
+                evasion         = e.evasion,
+                maxStamina      = e.stamina,
+                currentStamina  = e.stamina,
+                level = e.level
+            };
+            return new CombatUnit
+            {
+                unitId = $"{e.enemyId}_{Guid.NewGuid().ToString("N").Substring(0, 6)}",
+                displayName = e.displayName,
+                side = CombatSide.Enemy,
+                stats = stats,
+                gridPosition = e.spawnPosition,
+                enemyAttackBonus = e.attackBonus,
+                enemyRole = e.role,
+                enemyTags = new List<string>(e.tags ?? new List<string>()),
+                fallbackWeapon = new WeaponDefinition
+                {
+                    itemId = $"{e.enemyId}_weapon",
+                    displayName = string.IsNullOrEmpty(e.weaponName) ? "Оружие" : e.weaponName,
+                    attackSkill = SkillType.BodyPower,
+                    range = e.weaponRange,
+                    damageDice = e.weaponDamage
+                }
+            };
+        }
+
+        // ============================================================
+        //  Сохранение (упрощённо)
+        // ============================================================
+
+        public string OnSave() => "";
+        public void OnLoad(string json) { }
     }
 
-    #region Data Types
+    // ================================================================
+    //   Типы данных
+    // ================================================================
+
+    public enum CombatSide { Player, Enemy, Neutral }
+
+    public enum EnemyRole
+    {
+        Minion,      // Приспешник
+        Standard,    // Рядовой
+        Skirmisher,  // Скрытный
+        Bruiser,     // Громила
+        Leader,      // Лидер
+        Support,     // Поддержка
+        Solo         // Одиночка
+    }
 
     [Serializable]
     public class CombatUnit
     {
         public string unitId;
         public string displayName;
-        public bool isPlayerControlled;
-        public bool isDead;
-        public bool isStunned;
-        public bool hasMoved;
+        public CombatSide side;
 
-        // Ссылка на персонажа (для синхронизации)
+        // Позиция и общие флаги.
+        public Vector2Int gridPosition;
+        public bool hasMovedThisTurn;
+        private bool dead;
+        public bool IsDead => dead || (stats != null && !stats.IsAlive);
+        public void MarkDead() => dead = true;
+
+        // Ссылка на характеристики.
+        [NonSerialized] public CharacterStats stats;
+
+        // Для игрока — прямой доступ к персонажу (инвентарь, домены, карты).
         [NonSerialized] public PlayerCharacter character;
 
-        // Статы
-        public int currentHP;
-        public int maxHP;
-        public int currentMP;
-        public int maxMP;
-        public int armorClass;
-        public int initiative;
+        // Оружие "по умолчанию" (для юнитов без equippedMainWeaponId).
+        [NonSerialized] public WeaponDefinition fallbackWeapon;
 
-        // Модификаторы
-        public int strengthMod;
-        public int dexterityMod;
-        public int constitutionMod;
-        public int proficiencyBonus;
-        public int weaponDamage;
-
-        // Очки действий
-        public float maxActionPoints;
-        public float currentActionPoints;
-
-        // Позиция на сетке
-        public Vector2Int gridPosition;
-
-        // Опыт за убийство
-        public int experienceValue;
-
-        // Эффекты
-        private List<StatusEffect> activeEffects = new();
-
-        public int GetIntelligenceMod() => 0; // TODO
-
-        public int GetSaveBonus(SaveType saveType)
-        {
-            return saveType switch
-            {
-                SaveType.Fortitude => constitutionMod + proficiencyBonus,
-                SaveType.Reflex => dexterityMod + proficiencyBonus,
-                SaveType.Will => proficiencyBonus,
-                _ => 0
-            };
-        }
-
-        public void TickEffects()
-        {
-            for (int i = activeEffects.Count - 1; i >= 0; i--)
-            {
-                activeEffects[i].remainingDuration--;
-                if (activeEffects[i].remainingDuration <= 0)
-                    activeEffects.RemoveAt(i);
-            }
-        }
-
-        public void ApplyEffect(StatusEffect effect)
-        {
-            activeEffects.Add(effect);
-        }
-    }
-
-    [Serializable]
-    public class CombatAction
-    {
-        public CombatUnit performer;
-        public CombatUnit target;
-        public CombatActionType actionType;
-        public float actionPointCost;
-        public Func<CombatActionResult> Execute;
-    }
-
-    public enum CombatActionType
-    {
-        MeleeAttack,
-        RangedAttack,
-        Spell,
-        Item,
-        Defend,
-        Dash,
-        Hide,
-        UseAbility
-    }
-
-    [Serializable]
-    public class CombatActionResult
-    {
-        public bool success;
-        public int damageDealt;
-        public int healingDone;
-        public bool isCritical;
-        public string message;
+        // Данные врага.
+        public int enemyAttackBonus;
+        public EnemyRole enemyRole;
+        public List<string> enemyTags = new();
     }
 
     [Serializable]
     public class CombatEncounter
     {
         public string encounterId;
-        public List<EnemyDefinition> enemies = new();
         public string environment;
-        public bool isBossFight;
+        public List<EnemyDefinition> enemies = new();
     }
 
     [Serializable]
@@ -836,62 +674,71 @@ namespace RPG.Combat
     {
         public string enemyId;
         public string displayName;
-        public int maxHP;
-        public int armorClass;
-        public int strengthMod;
-        public int dexterityMod;
-        public int constitutionMod;
-        public int proficiencyBonus;
-        public int weaponDamage;
-        public int experienceValue;
+        public EnemyRole role = EnemyRole.Standard;
+        public int level = 1;
+
+        // Защита.
+        public int evasion = 10;         // «Сложность» по ГДД
+        public int damageThreshold = 5;
+        public int armorRating = 0;
+        public int armorSlots = 0;
+
+        // Здоровье.
+        public int healthSlots = 4;
+        public int hpPerSlot = 5;
+
+        // Ресурсы.
+        public int stamina = 1;
+
+        // Атака.
+        public int attackBonus = 0;
+        public string weaponName = "Оружие";
+        public WeaponRange weaponRange = WeaponRange.Melee;
+        public string weaponDamage = "d6";
+
+        // Позиция.
         public Vector2Int spawnPosition;
-        public string lootTableId;
+
+        // Теги для спец-логики (например "morale_lust", "guard").
+        public List<string> tags = new();
     }
 
-    [Serializable]
-    public class SpellDefinition
+    public struct RollOutcome
     {
-        public string spellId;
-        public string displayName;
-        public int mpCost;
-        public int baseDamage;
-        public bool requiresSave;
-        public SaveType saveType;
-        public int saveDC;
-        public int range;
-        public StatusEffect appliedEffect;
+        public bool isDuality;
+        public int hopeDie;
+        public int fearDie;
+        public int total;
+        public bool HopeSide => isDuality && hopeDie > fearDie;
+        public bool FearSide => isDuality && fearDie > hopeDie;
+        public bool Crit     => isDuality && hopeDie == fearDie;
     }
 
-    public enum SaveType
+    public struct AttackResult
     {
-        Fortitude,
-        Reflex,
-        Will
+        public CombatUnit attacker;
+        public CombatUnit target;
+        public RollOutcome roll;
+        public int requiredEvasion;
+        public bool hit;
+        public int rawDamage;
+        public DamageResult damage;
+        public string message;
     }
 
-    #endregion
-
-    #region Save Data
-
-    [Serializable]
-    public class CombatSaveData
+    public struct ShortRestResult
     {
-        public bool isActive;
-        public int roundNumber;
-        public int currentTurnIndex;
-        public List<CombatUnitSaveData> units = new();
+        public CombatUnit unit;
+        public RollOutcome roll;
+        public bool consumesAction;
+        public string message;
     }
 
-    [Serializable]
-    public class CombatUnitSaveData
+    public enum CombatLogKind { System, Attack, Ability, Damage, Movement }
+
+    public struct CombatLogEntry
     {
-        public string unitId;
-        public int currentHP;
-        public int currentMP;
-        public Vector2Int gridPosition;
-        public bool isDead;
-        public int initiative;
+        public CombatLogKind kind;
+        public string message;
     }
-
-    #endregion
 }

@@ -5,248 +5,261 @@ using System.Collections.Generic;
 namespace RPG.Character
 {
     /// <summary>
-    /// Все характеристики и навыки персонажа по системе RPG старой школы (Веридия).
-    /// Используется и для игрока, и для компаньонов.
-    /// Система бросков: 2d6 + Характеристика против СЛ (Сложности Проверки). При преимуществе: 3d6 (выбор 2 лучших).
+    /// Характеристики персонажа по ГДД:
+    ///  — 8 навыков (-1..+3), никаких «атрибутов» отдельно от навыков нет.
+    ///  — Проверка: 2d6 + бонус навыка против СЛ (5 лёгкая / 7 средняя / 9 сложная / 11+ очень сложная).
+    ///  — Здоровье: N шкал (обычно 6), в каждой X HP от брони.
+    ///  — Броня: N ячеек (по броне), Порог Урона (DT) — если урон < DT, атака не наносит ничего; иначе ломает 1 ячейку и остаток идёт по HP.
+    ///  — Уклонение (Evasion) — «класс защиты», от класса + модификатор брони + другие бонусы.
+    ///  — Выносливость (Stamina) — уникальный ресурс юнита, по умолчанию max=1.
     /// </summary>
     [Serializable]
     public class CharacterStats
     {
-        [Header("Core Characteristics (-1 to +3)")]
+        [Header("Skills (-1..+3)")]
         public int bodyPower = 0;          // Мощность тела
         public int attentiveness = 0;      // Внимательность (восприятие + проницательность)
         public int nature = 0;             // Природа
         public int trickery = 0;           // Плутовство (скрытность + обман)
-        public int sleightOfHand = 0;      // Ловкость рук (воровство + взаимодействие с механизмами)
-        public int bodyKnowledge = 0;      // Знания тела
-        public int academicKnowledge = 0;  // Академические знания (религия, история и т.д.)
+        public int sleightOfHand = 0;      // Ловкость рук
+        public int bodyKnowledge = 0;      // Знания тела (медицина)
+        public int academicKnowledge = 0;  // Академические знания
         public int magic = 0;              // Магия
-
-        [Header("Derived Stats")]
-        public int maxHP = 20;
-        public int currentHP = 20;
-        public int maxMP = 10;
-        public int currentMP = 10;
-        public int armorClass = 10;
-        public int initiative = 0;
-
-        [Header("Skills & Proficiencies")]
-        public List<SkillEntry> skills = new();
 
         [Header("Progression")]
         public int level = 1;
-        public int experience = 0;
-        public int experienceToNextLevel = 100;
 
-        // Legacy D&D aliases for backward compatibility with combat and utility scripts
-        public int strength { get => bodyPower; set => bodyPower = value; }
-        public int dexterity { get => sleightOfHand; set => sleightOfHand = value; }
-        public int constitution { get => bodyKnowledge; set => bodyKnowledge = value; }
-        public int intelligence { get => academicKnowledge; set => academicKnowledge = value; }
-        public int wisdom { get => attentiveness; set => attentiveness = value; }
-        public int charisma { get => trickery; set => trickery = value; }
+        [Header("Health (Hit Slots)")]
+        [Tooltip("Максимальное число ячеек здоровья. По умолчанию 6.")]
+        public int maxHealthSlots = 6;
+        [Tooltip("Сколько ячеек здоровья уже сломано.")]
+        public int usedHealthSlots = 0;
+        [Tooltip("Сколько единиц HP в одной ячейке — зависит от надетой брони.")]
+        public int hpPerSlot = 6;
+        [Tooltip("Текущий HP внутри текущей (частично сломанной) ячейки.")]
+        public int currentSlotHp = 6;
 
-        public int GetStrengthMod => bodyPower;
-        public int GetDexterityMod => sleightOfHand;
-        public int GetConstitutionMod => bodyKnowledge;
-        public int GetIntelligenceMod => academicKnowledge;
-        public int GetWisdomMod => attentiveness;
-        public int GetCharismaMod => trickery;
+        [Header("Armor")]
+        [Tooltip("Ячейки брони. Заполняются при экипировке брони.")]
+        public int maxArmorSlots = 0;
+        public int usedArmorSlots = 0;
+        [Tooltip("Порог Урона. Если урон меньше этого значения — атака ноль.")]
+        public int damageThreshold = 0;
+        [Tooltip("Показатель Брони — сколько урона поглощает пробитая ячейка (вычитается перед уроном по HP при желании; в базовой ГДД-модели используем DT).")]
+        public int armorRating = 0;
 
-        public static string GetRussianName(SkillType skill) => SkillEntry.GetRussianName(skill);
+        [Header("Defense")]
+        public int evasion = 10;
 
-        public int GetAttributeModifier(AttributeType attribute)
+        [Header("Stamina")]
+        public int maxStamina = 1;
+        public int currentStamina = 1;
+
+        [Header("Skill entries (proficiencies etc — не используется в базовой ГДД-модели, оставлено под расширения)")]
+        public List<SkillEntry> skills = new();
+
+        // ================================================================
+        //   ПРОВЕРКИ 2d6 + БОНУС (для диалоговых и вне-боевых бросков)
+        // ================================================================
+
+        public int GetSkillBonus(SkillType skill) => skill switch
         {
-            return attribute switch
-            {
-                AttributeType.BodyPower => bodyPower,
-                AttributeType.Attentiveness => attentiveness,
-                AttributeType.Nature => nature,
-                AttributeType.Trickery => trickery,
-                AttributeType.SleightOfHand => sleightOfHand,
-                AttributeType.BodyKnowledge => bodyKnowledge,
-                AttributeType.AcademicKnowledge => academicKnowledge,
-                AttributeType.Magic => magic,
-                _ => 0
-            };
-        }
+            SkillType.BodyPower          => bodyPower,
+            SkillType.Attentiveness      => attentiveness,
+            SkillType.Nature             => nature,
+            SkillType.Trickery           => trickery,
+            SkillType.SleightOfHand      => sleightOfHand,
+            SkillType.BodyKnowledge      => bodyKnowledge,
+            SkillType.AcademicKnowledge  => academicKnowledge,
+            SkillType.Magic              => magic,
+            _ => 0
+        };
 
-        public int GetAttributeValue(AttributeType attribute) => GetAttributeModifier(attribute);
-
-        public void SetAttributeValue(AttributeType attribute, int value)
+        public void SetSkillBonus(SkillType skill, int value)
         {
-            switch (attribute)
+            switch (skill)
             {
-                case AttributeType.BodyPower: bodyPower = value; break;
-                case AttributeType.Attentiveness: attentiveness = value; break;
-                case AttributeType.Nature: nature = value; break;
-                case AttributeType.Trickery: trickery = value; break;
-                case AttributeType.SleightOfHand: sleightOfHand = value; break;
-                case AttributeType.BodyKnowledge: bodyKnowledge = value; break;
-                case AttributeType.AcademicKnowledge: academicKnowledge = value; break;
-                case AttributeType.Magic: magic = value; break;
+                case SkillType.BodyPower:         bodyPower = value; break;
+                case SkillType.Attentiveness:     attentiveness = value; break;
+                case SkillType.Nature:            nature = value; break;
+                case SkillType.Trickery:          trickery = value; break;
+                case SkillType.SleightOfHand:     sleightOfHand = value; break;
+                case SkillType.BodyKnowledge:     bodyKnowledge = value; break;
+                case SkillType.AcademicKnowledge: academicKnowledge = value; break;
+                case SkillType.Magic:             magic = value; break;
             }
         }
 
-        public int GetSkillBonus(SkillType skillType)
-        {
-            int baseMod = GetAttributeModifier((AttributeType)(int)skillType);
-            var entry = skills.Find(s => s.skillType == skillType);
-            int profBonus = (entry != null && entry.isProficient) ? GetProficiencyBonus() : 0;
-            int miscBonus = entry != null ? entry.miscBonus : 0;
-
-            return baseMod + profBonus + miscBonus;
-        }
-
-        public int GetProficiencyBonus()
-        {
-            // Бонус мастерства/уровня: +1 на 1 ур., +2 на 3 ур., +3 на 5 ур.
-            return 1 + (level - 1) / 2;
-        }
-
-        public bool CheckSkill(SkillType skillType, int difficultyClass)
-        {
-            return CheckSkillDetailed(skillType, difficultyClass).success;
-        }
+        public bool CheckSkill(SkillType skill, int difficultyClass, bool advantage = false, bool disadvantage = false)
+            => CheckSkillDetailed(skill, difficultyClass, advantage, disadvantage).success;
 
         /// <summary>
-        /// Проверка навыка/характеристики по правилам: 2d6 + характеристика против СЛ.
-        /// При преимуществе кидается 3d6, выбираются 2 лучших.
-        /// СЛ 5 = Лёгкая, СЛ 7 = Средняя, СЛ 9 = Сложная, СЛ 11+ = Очень сложная.
+        /// Стандартный вне-боевой бросок 2d6 + бонус vs СЛ. Преимущество/помеха — +d6/-d6.
         /// </summary>
-        public (bool success, int roll, int total) CheckSkillDetailed(SkillType skillType, int difficultyClass, bool hasAdvantage = false)
+        public (bool success, int roll, int total, int bonus) CheckSkillDetailed(
+            SkillType skill, int difficultyClass, bool advantage = false, bool disadvantage = false)
         {
-            int bonus = GetSkillBonus(skillType);
-            int roll;
+            int bonus = GetSkillBonus(skill);
+            int d1 = UnityEngine.Random.Range(1, 7);
+            int d2 = UnityEngine.Random.Range(1, 7);
+            int roll = d1 + d2;
+            if (advantage && !disadvantage) roll += UnityEngine.Random.Range(1, 7);
+            else if (disadvantage && !advantage) roll -= UnityEngine.Random.Range(1, 7);
+            int total = roll + bonus;
+            return (total >= difficultyClass, roll, total, bonus);
+        }
 
-            if (hasAdvantage)
+        // ================================================================
+        //   ЗДОРОВЬЕ / БРОНЯ (ГДД-модель)
+        // ================================================================
+
+        /// <summary>Полное максимальное HP = слоты × HP в слоте.</summary>
+        public int TotalMaxHP => maxHealthSlots * hpPerSlot;
+        /// <summary>Текущее HP суммарно.</summary>
+        public int TotalCurrentHP => Mathf.Max(0, (maxHealthSlots - usedHealthSlots - 1) * hpPerSlot + Mathf.Max(0, currentSlotHp));
+
+        public bool IsAlive => usedHealthSlots < maxHealthSlots;
+
+        /// <summary>
+        /// Наносит урон по ГДД-правилам.
+        ///   1) Если брони >= 1: сравниваем rawDamage с DT.
+        ///      Не пробили → 0 урона.
+        ///      Пробили → тратим 1 ячейку брони, остаток HP-урона = rawDamage - hpPerSlot (одна шкала).
+        ///   2) Иначе: весь rawDamage идёт по HP.
+        /// Возвращает разбивку урона для лога.
+        /// </summary>
+        public DamageResult TakeDamage(int rawDamage, bool bypassArmor = false)
+        {
+            var result = new DamageResult { rawDamage = rawDamage };
+
+            if (rawDamage <= 0) return result;
+
+            if (!bypassArmor && usedArmorSlots < maxArmorSlots)
             {
-                // Кидаем 3d6, выбираем 2 лучших кубика (Преимущество)
-                int d1 = UnityEngine.Random.Range(1, 7);
-                int d2 = UnityEngine.Random.Range(1, 7);
-                int d3 = UnityEngine.Random.Range(1, 7);
-                int sum = d1 + d2 + d3;
-                int minDie = Mathf.Min(d1, Mathf.Min(d2, d3));
-                roll = sum - minDie;
+                if (rawDamage < damageThreshold)
+                {
+                    // Пороги удержали удар — 0 урона.
+                    result.blockedByThreshold = true;
+                    return result;
+                }
+
+                // Ломается 1 ячейка брони, остаток = rawDamage - "одна шкала здоровья" (по ГДД пример с латами 11 урона).
+                usedArmorSlots++;
+                result.armorSlotBroken = true;
+                int leftover = Mathf.Max(0, rawDamage - hpPerSlot);
+                ApplyHpDamage(leftover, result);
             }
             else
             {
-                // Стандартный бросок 2d6 (от 2 до 12)
-                int d1 = UnityEngine.Random.Range(1, 7);
-                int d2 = UnityEngine.Random.Range(1, 7);
-                roll = d1 + d2;
+                ApplyHpDamage(rawDamage, result);
             }
 
-            int total = roll + bonus;
-            return (total >= difficultyClass, roll, total);
+            return result;
         }
 
-        public void TakeDamage(int amount)
+        private void ApplyHpDamage(int amount, DamageResult result)
         {
-            currentHP = Mathf.Max(0, currentHP - amount);
-        }
-
-        public void Heal(int amount)
-        {
-            currentHP = Mathf.Min(maxHP, currentHP + amount);
-        }
-
-        public void SpendMP(int amount)
-        {
-            currentMP = Mathf.Max(0, currentMP - amount);
-        }
-
-        public void RestoreMP(int amount)
-        {
-            currentMP = Mathf.Min(maxMP, currentMP + amount);
-        }
-
-        public bool IsAlive => currentHP > 0;
-
-        public void RecalculateDerivedStats()
-        {
-            maxHP = 20 + (bodyPower * 5) + (bodyKnowledge * 3) + (level * 4);
-            maxMP = 10 + (magic * 5) + (academicKnowledge * 3) + (level * 3);
-            armorClass = 10 + sleightOfHand + (bodyPower > 0 ? 1 : 0);
-            initiative = attentiveness + sleightOfHand;
-            if (currentHP == 0) currentHP = maxHP; // Начальная инициализация
-            currentHP = Mathf.Clamp(currentHP, 1, maxHP);
-            currentMP = Mathf.Clamp(currentMP, 0, maxMP);
-        }
-
-        public bool TryLevelUp()
-        {
-            if (experience >= experienceToNextLevel)
+            if (amount <= 0) return;
+            result.hpDamageDealt += amount;
+            currentSlotHp -= amount;
+            while (currentSlotHp <= 0 && usedHealthSlots < maxHealthSlots)
             {
-                experience -= experienceToNextLevel;
-                level++;
-                experienceToNextLevel = level * 100;
-                RecalculateDerivedStats();
-                currentHP = maxHP;
-                currentMP = maxMP;
-                return true;
+                usedHealthSlots++;
+                result.healthSlotsBroken++;
+                if (usedHealthSlots >= maxHealthSlots) { currentSlotHp = 0; break; }
+                currentSlotHp += hpPerSlot;
             }
-            return false;
+            if (currentSlotHp > hpPerSlot) currentSlotHp = hpPerSlot;
         }
+
+        /// <summary>Восстанавливает N шкал здоровья (для эффекта «восстановить X шкал»).</summary>
+        public void HealHealthSlots(int slots)
+        {
+            if (slots <= 0) return;
+            usedHealthSlots = Mathf.Max(0, usedHealthSlots - slots);
+            currentSlotHp = hpPerSlot;
+        }
+
+        /// <summary>Восстанавливает броню полностью — вызывается в начале каждого боя.</summary>
+        public void ResetArmorAtCombatStart()
+        {
+            usedArmorSlots = 0;
+        }
+
+        public void SpendStamina(int amount = 1)
+        {
+            if (currentStamina >= amount) currentStamina -= amount;
+            else
+            {
+                // Если Выносливости не хватает — тратим ячейку HP (правило ГДД).
+                int deficit = amount - currentStamina;
+                currentStamina = 0;
+                for (int i = 0; i < deficit && IsAlive; i++)
+                {
+                    usedHealthSlots++;
+                    if (usedHealthSlots >= maxHealthSlots) break;
+                    currentSlotHp = hpPerSlot;
+                }
+            }
+        }
+
+        public void RestoreStamina(int amount = 1)
+        {
+            currentStamina = Mathf.Clamp(currentStamina + amount, 0, maxStamina);
+        }
+
+        public void ResetStaminaAtCombatStart()
+        {
+            currentStamina = maxStamina;
+        }
+
+        // ================================================================
+        //   ЛОКАЛИЗАЦИЯ
+        // ================================================================
+
+        public static string GetRussianName(SkillType skill) => skill switch
+        {
+            SkillType.BodyPower         => "Мощность тела",
+            SkillType.Attentiveness     => "Внимательность",
+            SkillType.Nature            => "Природа",
+            SkillType.Trickery          => "Плутовство",
+            SkillType.SleightOfHand     => "Ловкость рук",
+            SkillType.BodyKnowledge     => "Знания тела",
+            SkillType.AcademicKnowledge => "Академические знания",
+            SkillType.Magic             => "Магия",
+            _ => skill.ToString()
+        };
     }
 
     [Serializable]
     public class SkillEntry
     {
         public SkillType skillType;
-        public bool isProficient;
-        public bool hasExpertise;
         public int miscBonus;
 
-        public AttributeType GetGoverningAttribute()
-        {
-            return (AttributeType)(int)skillType;
-        }
-
-        public static string GetRussianName(SkillType skill)
-        {
-            return skill switch
-            {
-                SkillType.BodyPower => "Мощность тела",
-                SkillType.Attentiveness => "Внимательность",
-                SkillType.Nature => "Природа",
-                SkillType.Trickery => "Плутовство",
-                SkillType.SleightOfHand => "Ловкость рук",
-                SkillType.BodyKnowledge => "Знания тела",
-                SkillType.AcademicKnowledge => "Академические знания",
-                SkillType.Magic => "Магия",
-                _ => skill.ToString()
-            };
-        }
+        /// <summary>Прокси на CharacterStats.GetRussianName для обратной совместимости со старым кодом.</summary>
+        public static string GetRussianName(SkillType skill) => CharacterStats.GetRussianName(skill);
     }
 
-    /// <summary>
-    /// 8 основных характеристик игрока в мире Веридия
-    /// </summary>
-    public enum AttributeType
-    {
-        BodyPower = 0,          // Мощность тела
-        Attentiveness = 1,      // Внимательность (восприятие + проницательность)
-        Nature = 2,             // Природа
-        Trickery = 3,           // Плутовство (скрытность + обман)
-        SleightOfHand = 4,      // Ловкость рук (воровство + взаимодействие с механизмами)
-        BodyKnowledge = 5,      // Знания тела
-        AcademicKnowledge = 6,  // Академические знания (религия, история и т.д.)
-        Magic = 7               // Магия
-    }
-
-    /// <summary>
-    /// Навыки в нашей системе 1:1 соответствуют 8 основным характеристикам
-    /// </summary>
+    /// <summary>8 навыков ГДД.</summary>
     public enum SkillType
     {
-        BodyPower = 0,          // Мощность тела
-        Attentiveness = 1,      // Внимательность
-        Nature = 2,             // Природа
-        Trickery = 3,           // Плутовство
-        SleightOfHand = 4,      // Ловкость рук
-        BodyKnowledge = 5,      // Знания тела
-        AcademicKnowledge = 6,  // Академические знания
-        Magic = 7               // Магия
+        BodyPower = 0,
+        Attentiveness = 1,
+        Nature = 2,
+        Trickery = 3,
+        SleightOfHand = 4,
+        BodyKnowledge = 5,
+        AcademicKnowledge = 6,
+        Magic = 7
+    }
+
+    public struct DamageResult
+    {
+        public int rawDamage;
+        public bool blockedByThreshold;
+        public bool armorSlotBroken;
+        public int hpDamageDealt;
+        public int healthSlotsBroken;
     }
 }

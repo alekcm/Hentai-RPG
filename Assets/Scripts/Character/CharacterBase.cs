@@ -2,11 +2,13 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using RPG.Core;
+using RPG.Domains;
 
 namespace RPG.Character
 {
     /// <summary>
-    /// Базовый класс для любого персонажа (игрок, компаньон, NPC)
+    /// Базовый класс для любого персонажа (игрок, компаньон, NPC-союзник).
+    /// Приведён к ГДД: 8 навыков, ячейки здоровья/брони, Выносливость, домены+карты.
     /// </summary>
     [Serializable]
     public class CharacterBase
@@ -15,17 +17,26 @@ namespace RPG.Character
         public string displayName;
         public RaceType race;
         public ClassType characterClass;
-        public CharacterStats stats;
+        public string subclassId;
         public Gender gender;
+        public CharacterStats stats;
 
-        // Инвентарь
+        // Выбранные домены (по ГДД — обычно 2).
+        public List<DomainType> chosenDomains = new();
+
+        // Взятые карты доменов (id из DomainDatabase).
+        public List<string> knownDomainCards = new();
+
+        // Инвентарь и снаряжение.
         public List<string> inventory = new();
-        public List<string> equippedItems = new();
+        public string equippedMainWeaponId;
+        public string equippedOffhandId;
+        public string equippedArmorId;
 
-        // Активные эффекты
+        // Активные эффекты (бафф/дебафф/состояния).
         public List<StatusEffect> activeEffects = new();
 
-        // Флаги персонажа
+        // Флаги персонажа.
         public Dictionary<string, bool> characterFlags = new();
 
         public CharacterBase()
@@ -35,56 +46,43 @@ namespace RPG.Character
 
         public virtual void Initialize()
         {
-            ApplyRaceBonuses();
-            stats.RecalculateDerivedStats();
+            // По ГДД у рас нет бонусов к навыкам — только особенности, которые обрабатываются в бою.
+            // Здесь можно позже отработать «пассивные» расовые эффекты (например, у Человека maxStamina+1).
+            ApplyRacePassives();
         }
 
-        protected void ApplyRaceBonuses()
+        private void ApplyRacePassives()
         {
-            var raceDef = RaceDatabase.GetRace(race);
-            if (raceDef == null) return;
+            var race = RaceDatabase.GetRace(this.race);
+            if (race == null) return;
 
-            foreach (var bonus in raceDef.attributeBonuses)
+            foreach (var f in race.features)
             {
-                switch (bonus.Key)
+                if (f.trigger != RaceFeatureTrigger.Passive) continue;
+                switch (f.featureId)
                 {
-                    case AttributeType.BodyPower: stats.bodyPower += bonus.Value; break;
-                    case AttributeType.Attentiveness: stats.attentiveness += bonus.Value; break;
-                    case AttributeType.Nature: stats.nature += bonus.Value; break;
-                    case AttributeType.Trickery: stats.trickery += bonus.Value; break;
-                    case AttributeType.SleightOfHand: stats.sleightOfHand += bonus.Value; break;
-                    case AttributeType.BodyKnowledge: stats.bodyKnowledge += bonus.Value; break;
-                    case AttributeType.AcademicKnowledge: stats.academicKnowledge += bonus.Value; break;
-                    case AttributeType.Magic: stats.magic += bonus.Value; break;
+                    case "human_high_stamina":
+                        stats.maxStamina = Mathf.Max(stats.maxStamina, 2);
+                        stats.currentStamina = stats.maxStamina;
+                        break;
+                    // "orc_hardy" (стойкий) обрабатывается в бою по условию.
                 }
             }
         }
 
-        public void SetFlag(string flag, bool value = true)
-        {
-            characterFlags[flag] = value;
-        }
+        // ---------- Флаги/инвентарь ----------
 
-        public bool GetFlag(string flag)
-        {
-            return characterFlags.TryGetValue(flag, out bool value) && value;
-        }
+        public void SetFlag(string flag, bool value = true) => characterFlags[flag] = value;
+        public bool GetFlag(string flag) => characterFlags.TryGetValue(flag, out var v) && v;
 
         public void AddItem(string itemId)
         {
-            if (!inventory.Contains(itemId))
-                inventory.Add(itemId);
+            if (!inventory.Contains(itemId)) inventory.Add(itemId);
         }
+        public void RemoveItem(string itemId) => inventory.Remove(itemId);
+        public bool HasItem(string itemId) => inventory.Contains(itemId);
 
-        public void RemoveItem(string itemId)
-        {
-            inventory.Remove(itemId);
-        }
-
-        public bool HasItem(string itemId)
-        {
-            return inventory.Contains(itemId);
-        }
+        // ---------- Эффекты ----------
 
         public void ApplyEffect(StatusEffect effect)
         {
@@ -92,14 +90,12 @@ namespace RPG.Character
             effect.OnApply(this);
         }
 
+        public bool HasEffect(string effectId) => activeEffects.Exists(e => e.effectId == effectId);
+
         public void RemoveEffect(string effectId)
         {
-            var effect = activeEffects.Find(e => e.effectId == effectId);
-            if (effect != null)
-            {
-                effect.OnRemove(this);
-                activeEffects.Remove(effect);
-            }
+            var e = activeEffects.Find(x => x.effectId == effectId);
+            if (e != null) { e.OnRemove(this); activeEffects.Remove(e); }
         }
 
         public void TickEffects()
@@ -118,118 +114,58 @@ namespace RPG.Character
     }
 
     /// <summary>
-    /// Класс игрока с дополнительной функциональностью
+    /// Класс игрока с дополнительной функциональностью.
     /// </summary>
     [Serializable]
     public class PlayerCharacter : CharacterBase
     {
         public string playerName;
         public string background;
-        public List<string> knownSpells = new();
-        public List<string> knownAbilities = new();
-        public int gold = 50;
+        public int gold = 0;
 
-        // Репутация у фракций
         public Dictionary<string, int> factionReputation = new();
 
         public override void Initialize()
         {
             base.Initialize();
-            ApplyClassAbilities();
-        }
-
-        private void ApplyClassAbilities()
-        {
-            var classDef = ClassDatabase.GetClass(characterClass);
-            if (classDef == null) return;
-
-            knownAbilities.AddRange(classDef.startingAbilities);
-
-            // Создаём записи навыков
-            foreach (var skill in classDef.classSkillOptions)
-            {
-                var entry = new SkillEntry
-                {
-                    skillType = skill,
-                    isProficient = false
-                };
-                if (!stats.skills.Exists(s => s.skillType == skill))
-                    stats.skills.Add(entry);
-            }
-        }
-
-        public void SetSkillProficiency(SkillType skill, bool proficient = true)
-        {
-            var entry = stats.skills.Find(s => s.skillType == skill);
-            if (entry != null)
-                entry.isProficient = proficient;
-            else
-                stats.skills.Add(new SkillEntry { skillType = skill, isProficient = proficient });
+            // Классовые особенности сейчас декларативны (описания) — сработают в CombatManager.
         }
 
         public int GetFactionReputation(string factionId)
-        {
-            return factionReputation.TryGetValue(factionId, out int rep) ? rep : 0;
-        }
+            => factionReputation.TryGetValue(factionId, out int rep) ? rep : 0;
 
         public void ModifyFactionReputation(string factionId, int change)
         {
-            if (!factionReputation.ContainsKey(factionId))
-                factionReputation[factionId] = 0;
-            factionReputation[factionId] += change;
+            factionReputation.TryGetValue(factionId, out int r);
+            factionReputation[factionId] = r + change;
         }
 
-        public void AddGold(int amount)
-        {
-            gold += amount;
-        }
-
-        public bool SpendGold(int amount)
-        {
-            if (gold >= amount)
-            {
-                gold -= amount;
-                return true;
-            }
-            return false;
-        }
+        public void AddGold(int amount) => gold += amount;
+        public bool SpendGold(int amount) { if (gold < amount) return false; gold -= amount; return true; }
     }
 
-    /// <summary>
-    /// Эффект статуса (бафф/дебафф)
-    /// </summary>
     [Serializable]
     public class StatusEffect
     {
         public string effectId;
         public string displayName;
         public string description;
-        public int remainingDuration; // в ходах или минутах
+        public int remainingDuration;
         public EffectType effectType;
         public int magnitude;
 
-        public virtual void OnApply(CharacterBase character) { }
-        public virtual void OnRemove(CharacterBase character) { }
-        public virtual void OnTick(CharacterBase character) { }
+        public virtual void OnApply(CharacterBase c) { }
+        public virtual void OnRemove(CharacterBase c) { }
+        public virtual void OnTick(CharacterBase c) { }
     }
 
     public enum EffectType
     {
-        Buff,
-        Debuff,
-        DamageOverTime,
-        HealOverTime,
-        Stun,
-        Charm,
-        Fear,
-        Poison,
-        Curse
+        Buff, Debuff,
+        DamageOverTime, HealOverTime,
+        Stun, Charm, Fear, Poison, Curse,
+        Vulnerable, Immobilized, Asleep, Ignited, Restrained
     }
 
-    public enum Gender
-    {
-        Male,
-        Female,
-        Other
-    }
+    public enum Gender { Male, Female }
 }

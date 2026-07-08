@@ -253,10 +253,8 @@ namespace RPG.Dialogue
 
                 if (gender == Gender.Female && parts.Length > 1)
                     return parts[1];
-                if (gender == Gender.Other && parts.Length > 2)
-                    return parts[2];
 
-                return parts[0]; // Male по умолчанию
+                return parts[0]; // Male (или fallback, если пол не задан)
             });
         }
 
@@ -461,7 +459,7 @@ namespace RPG.Dialogue
             if (player == null)
                 return new SkillCheckResult { success = false };
 
-            var (success, roll, total) = player.stats.CheckSkillDetailed(
+            var (success, roll, total, _) = player.stats.CheckSkillDetailed(
                 check.skillType, check.difficultyClass);
 
             var result = new SkillCheckResult
@@ -522,15 +520,9 @@ namespace RPG.Dialogue
                     CharacterCreation.Instance?.Character?.SpendGold(action.intValue);
                     break;
                 case DialogueActionType.GiveExperience:
+                    // XP-прогрессии по ГДД нет; действие оставлено для совместимости со старыми диалогами.
                     if (CharacterCreation.Instance?.Character != null)
-                    {
-                        CharacterCreation.Instance.Character.stats.experience += action.intValue;
-                        if (CharacterCreation.Instance.Character.stats.TryLevelUp())
-                        {
-                            GameManager.Instance.EventBus.RaiseLevelUp(
-                                "player", CharacterCreation.Instance.Character.stats.level);
-                        }
-                    }
+                        GameManager.Instance.EventBus.RaiseExperienceGained("player", action.intValue);
                     break;
                 case DialogueActionType.ChangeAffinity:
                     Companion.CompanionManager.Instance?.ModifyAffinity(

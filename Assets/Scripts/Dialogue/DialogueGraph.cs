@@ -244,8 +244,10 @@ namespace RPG.Dialogue
             var player = Character.CharacterCreation.Instance?.Character;
             if (player == null) return false;
 
-            var attr = Enum.Parse<Character.AttributeType>(attribute);
-            return player.stats.GetAttributeValue(attr) >= minValue;
+            // По ГДД «атрибутов» отдельно нет — используем бонус одноимённого навыка.
+            if (Enum.TryParse<Character.SkillType>(attribute, out var skill))
+                return player.stats.GetSkillBonus(skill) >= minValue;
+            return false;
         }
 
         private bool CheckCompanionAffinity(string companionId, int minAffinity)

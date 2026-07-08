@@ -5,21 +5,50 @@ using System.Collections.Generic;
 namespace RPG.Character
 {
     /// <summary>
-    /// Определения рас с их бонусами и особенностями
+    /// Определения рас по ГДД (ERP Game.txt).
+    /// В ранней версии игры доступны 3 расы: Человек, Эльф, Тифлинг.
+    /// Расовых бонусов к атрибутам нет — только особенности, работающие в бою через Надежду/Выносливость.
+    /// Орк (полуорк) существует как раса компаньонов, не игрока.
     /// </summary>
     [Serializable]
     public class RaceDefinition
     {
         public RaceType raceType;
         public string displayName;
-        public string description;
-        public Dictionary<AttributeType, int> attributeBonuses = new();
-        public List<string> racialTraits = new();
-        public List<string> racialAbilities = new();
+        [TextArea(2, 5)] public string description;
 
-        // Для LLM контекста
-        [TextArea(2, 5)]
-        public string personalityArchetype;
+        /// <summary>Расовые особенности в виде id (обрабатываются подписчиками в бою).</summary>
+        public List<RaceFeature> features = new();
+
+        /// <summary>Строка-архетип для LLM-контекста.</summary>
+        [TextArea(2, 5)] public string personalityArchetype;
+    }
+
+    [Serializable]
+    public class RaceFeature
+    {
+        public string featureId;      // например "tiefling_fearless"
+        public string displayName;
+        [TextArea(2, 4)] public string description;
+        public RaceFeatureTrigger trigger; // когда предлагаем игроку использовать
+        public RaceFeatureCost cost;       // что тратим
+    }
+
+    public enum RaceFeatureTrigger
+    {
+        Manual,                 // игрок сам активирует
+        OnFearRoll,             // при броске со Страхом (Тифлинг: Бесстрашный)
+        OnAttackAgainstAdjacent,// когда рядом с нами кого-то атакуют (Тифлинг: Пугающий)
+        BeforeNextRoll,         // перед своим следующим броском (Эльф: Многовековая практика)
+        OnFailedRoll,           // при провале броска (Человек: Адаптивность)
+        Passive                 // сработает автоматически без окна (Орк: Стойкий; Человек: макс. Выносливости)
+    }
+
+    public enum RaceFeatureCost
+    {
+        None,
+        Stamina,
+        Hope
     }
 
     public static class RaceDatabase
@@ -35,13 +64,27 @@ namespace RPG.Character
                     {
                         raceType = RaceType.Human,
                         displayName = "Человек",
-                        description = "Универсальные и адаптивные. Люди преуспевают во всём, за что берутся.",
-                        attributeBonuses = new() {
-                            { AttributeType.BodyPower, 1 }, { AttributeType.AcademicKnowledge, 1 }
-                        },
-                        racialTraits = new() { "versatile", "adaptable", "ambitious" },
-                        racialAbilities = new() { "bonus_skill_proficiency" },
-                        personalityArchetype = "Амбициозный, легко адаптируется к любым условиям Веридии"
+                        description = "Обычный житель Веридии. Гибкий, упорный, привыкший подстраиваться под жизнь под пятой Инквизиции.",
+                        personalityArchetype = "Обычный житель королевства, познавший на своей шкуре двуличие Церкви Света.",
+                        features = new()
+                        {
+                            new RaceFeature
+                            {
+                                featureId = "human_high_stamina",
+                                displayName = "Высокая выносливость",
+                                description = "Имеет на 1 больше максимума очков Выносливости и начинает бой с двумя очками.",
+                                trigger = RaceFeatureTrigger.Passive,
+                                cost = RaceFeatureCost.None
+                            },
+                            new RaceFeature
+                            {
+                                featureId = "human_adaptability",
+                                displayName = "Адаптивность",
+                                description = "Провалив бросок, потратьте 1 Надежду, чтобы восстановить 1 Выносливость.",
+                                trigger = RaceFeatureTrigger.OnFailedRoll,
+                                cost = RaceFeatureCost.Hope
+                            }
+                        }
                     }
                 },
                 {
@@ -49,55 +92,27 @@ namespace RPG.Character
                     {
                         raceType = RaceType.Elf,
                         displayName = "Эльф",
-                        description = "Грациозные и долгоживущие. Эльфы обладают природной связью с магией.",
-                        attributeBonuses = new() {
-                            { AttributeType.SleightOfHand, 1 }, { AttributeType.Magic, 1 }
-                        },
-                        racialTraits = new() { "darkvision", "fey_ancestry", "keen_senses" },
-                        racialAbilities = new() { "trance", "perception_proficiency" },
-                        personalityArchetype = "Элегантный, мудрый не по годам, тонко чувствует потоки магии"
-                    }
-                },
-                {
-                    RaceType.Dwarf, new RaceDefinition
-                    {
-                        raceType = RaceType.Dwarf,
-                        displayName = "Дварф",
-                        description = "Крепкие и упрямые. Дварфы — непревзойдённые мастера и воины.",
-                        attributeBonuses = new() {
-                            { AttributeType.BodyKnowledge, 1 }, { AttributeType.BodyPower, 1 }
-                        },
-                        racialTraits = new() { "darkvision", "dwarven_resilience", "stonecunning" },
-                        racialAbilities = new() { "poison_resistance", "tool_proficiency" },
-                        personalityArchetype = "Прямолинейный, верный друзьям, невероятно стойкий"
-                    }
-                },
-                {
-                    RaceType.HalfOrc, new RaceDefinition
-                    {
-                        raceType = RaceType.HalfOrc,
-                        displayName = "Орк / Полуорк",
-                        description = "Сильные и свирепые. Воплощение первобытной мощи и стойкости.",
-                        attributeBonuses = new() {
-                            { AttributeType.BodyPower, 1 }, { AttributeType.BodyKnowledge, 1 }
-                        },
-                        racialTraits = new() { "darkvision", "relentless_endurance", "savage_attacks" },
-                        racialAbilities = new() { "intimidation_proficiency" },
-                        personalityArchetype = "Гордый воин, уважающий только силу, скрывающий боль за яростью"
-                    }
-                },
-                {
-                    RaceType.HalfElf, new RaceDefinition
-                    {
-                        raceType = RaceType.HalfElf,
-                        displayName = "Полуэльф",
-                        description = "Обаятельные и универсальные. Природные дипломаты и хитрецы.",
-                        attributeBonuses = new() {
-                            { AttributeType.Trickery, 1 }, { AttributeType.Attentiveness, 1 }
-                        },
-                        racialTraits = new() { "darkvision", "fey_ancestry", "skill_versatility" },
-                        racialAbilities = new() { "two_extra_skill_proficiencies" },
-                        personalityArchetype = "Обаятельный, легко находит общий язык в любой ситуации"
+                        description = "Долгоживущая раса, тонко ощущающая потоки магии. Инквизиция считает их прирождёнными еретиками.",
+                        personalityArchetype = "Мудрый, дистанцированный, воспринимает суету людей как быстро проходящее наваждение.",
+                        features = new()
+                        {
+                            new RaceFeature
+                            {
+                                featureId = "elf_ancient_practice",
+                                displayName = "Многовековая практика",
+                                description = "Потратьте Выносливость, чтобы совершить следующий бросок с преимуществом.",
+                                trigger = RaceFeatureTrigger.BeforeNextRoll,
+                                cost = RaceFeatureCost.Stamina
+                            },
+                            new RaceFeature
+                            {
+                                featureId = "elf_magically_gifted",
+                                displayName = "Магически одарённый",
+                                description = "Потратьте Надежду, чтобы сделать противника временно Уязвимым.",
+                                trigger = RaceFeatureTrigger.Manual,
+                                cost = RaceFeatureCost.Hope
+                            }
+                        }
                     }
                 },
                 {
@@ -105,27 +120,56 @@ namespace RPG.Character
                     {
                         raceType = RaceType.Tiefling,
                         displayName = "Тифлинг",
-                        description = "Потомки бездны. Обладают врожденной магией и притягательным плутовством.",
-                        attributeBonuses = new() {
-                            { AttributeType.Trickery, 1 }, { AttributeType.Magic, 1 }
-                        },
-                        racialTraits = new() { "darkvision", "hellish_resistance", "infernal_legacy" },
-                        racialAbilities = new() { "fire_resistance", "thaumaturgy_cantrip" },
-                        personalityArchetype = "Загадочный, обаятельный, привыкший к подозрению инквизиции"
+                        description = "Потомок демонов. В Веридии — синоним «скверны» в глазах Инквизиции: тифлингов хватают по любому подозрению.",
+                        personalityArchetype = "Привык к косым взглядам и обвинениям. Внешне спокоен, внутри — постоянный подсчёт путей отступления.",
+                        features = new()
+                        {
+                            new RaceFeature
+                            {
+                                featureId = "tiefling_fearless",
+                                displayName = "Бесстрашный",
+                                description = "Когда вы совершаете бросок со Страхом, потратьте Выносливость, чтобы заменить его на бросок с Надеждой. Вы не получаете Надежду за этот бросок.",
+                                trigger = RaceFeatureTrigger.OnFearRoll,
+                                cost = RaceFeatureCost.Stamina
+                            },
+                            new RaceFeature
+                            {
+                                featureId = "tiefling_intimidating",
+                                displayName = "Пугающий",
+                                description = "Потратьте Надежду, чтобы дать помеху на атаку, совершаемую в 2 клетках от вас.",
+                                trigger = RaceFeatureTrigger.OnAttackAgainstAdjacent,
+                                cost = RaceFeatureCost.Hope
+                            }
+                        }
                     }
                 },
+                // Орк — раса компаньонов (первая пара компаньонов пролога).
                 {
-                    RaceType.Halfling, new RaceDefinition
+                    RaceType.Orc, new RaceDefinition
                     {
-                        raceType = RaceType.Halfling,
-                        displayName = "Полурослик",
-                        description = "Маленькие и удачливые. Ловкость рук помогает им избегать неприятностей.",
-                        attributeBonuses = new() {
-                            { AttributeType.SleightOfHand, 1 }, { AttributeType.Trickery, 1 }
-                        },
-                        racialTraits = new() { "lucky", "brave", "halfling_nimbleness" },
-                        racialAbilities = new() { "reroll_ones", "advantage_vs_frightened" },
-                        personalityArchetype = "Весёлый, любопытный, мастерски взаимодействует с механизмами"
+                        raceType = RaceType.Orc,
+                        displayName = "Орк",
+                        description = "Крепкая раса, известная в Веридии своей несгибаемостью. Не доступна для игрока.",
+                        personalityArchetype = "Прямолинейный, вспыльчивый, живёт по кодексу силы.",
+                        features = new()
+                        {
+                            new RaceFeature
+                            {
+                                featureId = "orc_hardy",
+                                displayName = "Стойкий",
+                                description = "Когда у вас остаётся лишь 1 шкала здоровья, все атаки по вам совершаются с помехой.",
+                                trigger = RaceFeatureTrigger.Passive,
+                                cost = RaceFeatureCost.None
+                            },
+                            new RaceFeature
+                            {
+                                featureId = "orc_tusks",
+                                displayName = "Бивни",
+                                description = "При успешной атаке по цели Вплотную можно потратить Надежду, чтобы нанести дополнительно 1d6 урона бивнями.",
+                                trigger = RaceFeatureTrigger.Manual,
+                                cost = RaceFeatureCost.Hope
+                            }
+                        }
                     }
                 }
             };
@@ -136,16 +180,19 @@ namespace RPG.Character
             if (races == null) Initialize();
             return races.TryGetValue(type, out var def) ? def : null;
         }
+
+        /// <summary>Расы, которые может выбрать игрок при создании персонажа.</summary>
+        public static IReadOnlyList<RaceType> PlayableRaces => new[]
+        {
+            RaceType.Human, RaceType.Elf, RaceType.Tiefling
+        };
     }
 
     public enum RaceType
     {
-        Human,
-        Elf,
-        Dwarf,
-        HalfOrc,
-        HalfElf,
-        Tiefling,
-        Halfling
+        Human = 0,
+        Elf = 1,
+        Tiefling = 2,
+        Orc = 3
     }
 }

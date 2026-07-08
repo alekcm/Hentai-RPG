@@ -106,21 +106,24 @@ namespace RPG.Camp
             var player = Character.CharacterCreation.Instance?.Character;
             if (player != null)
             {
-                int hpRecovery = (player.stats.maxHP * longRestHPRecovery) / 100;
-                int mpRecovery = (player.stats.maxMP * longRestMPRecovery) / 100;
-
-                player.stats.Heal(hpRecovery);
-                player.stats.RestoreMP(mpRecovery);
+                // Долгий отдых: полностью восстанавливаем шкалы здоровья и Выносливость,
+                // сбрасываем броню (по ГДД броня в любом случае восстанавливается в начале боя).
+                player.stats.usedHealthSlots = 0;
+                player.stats.currentSlotHp = player.stats.hpPerSlot;
+                player.stats.ResetStaminaAtCombatStart();
+                player.stats.ResetArmorAtCombatStart();
             }
 
-            // Восстанавливаем компаньонов
+            // Восстанавливаем компаньонов.
             var companions = CompanionManager.Instance.GetPartyMembers();
             foreach (var companion in companions)
             {
                 if (companion.stats != null)
                 {
-                    companion.stats.currentHP = companion.stats.maxHP;
-                    companion.stats.currentMP = companion.stats.maxMP;
+                    companion.stats.usedHealthSlots = 0;
+                    companion.stats.currentSlotHp = companion.stats.hpPerSlot;
+                    companion.stats.ResetStaminaAtCombatStart();
+                    companion.stats.ResetArmorAtCombatStart();
                 }
             }
 
@@ -140,8 +143,10 @@ namespace RPG.Camp
             var player = Character.CharacterCreation.Instance?.Character;
             if (player != null)
             {
-                int hpRecovery = player.stats.maxHP / 2;
-                player.stats.Heal(hpRecovery);
+                // Короткий отдых (вне боя): восстановить половину сломанных шкал (округление вверх).
+                int recover = (player.stats.usedHealthSlots + 1) / 2;
+                player.stats.HealHealthSlots(recover);
+                player.stats.ResetStaminaAtCombatStart();
             }
 
             GameManager.Instance.AdvanceTime(1f);

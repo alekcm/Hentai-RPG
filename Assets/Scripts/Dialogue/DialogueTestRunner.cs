@@ -4,6 +4,7 @@ using UnityEngine.InputSystem.UI;
 using System.Collections;
 using RPG.Core;
 using RPG.Character;
+using RPG.Domains;
 using RPG.UI;
 
 namespace RPG.Dialogue
@@ -71,18 +72,32 @@ namespace RPG.Dialogue
                 CharacterCreation.Instance.SelectClass(testClass);
                 CharacterCreation.Instance.SetGender(testGender);
 
-                var character = CharacterCreation.Instance.Character;
-                if (character != null)
+                // Тестовое распределение навыков (2 / 1 / 1 / -1).
+                CharacterCreation.Instance.SetSkill(SkillType.SleightOfHand, 2);
+                CharacterCreation.Instance.SetSkill(SkillType.Attentiveness, 1);
+                CharacterCreation.Instance.SetSkill(SkillType.Trickery, 1);
+                CharacterCreation.Instance.SetSkill(SkillType.BodyPower, -1);
+
+                // Подкласс, домены и стартовые карты — для полноценного персонажа готового к бою.
+                var clsDef = ClassDatabase.GetClass(testClass);
+                if (clsDef != null && clsDef.subclasses.Count > 0)
+                    CharacterCreation.Instance.SelectSubclass(clsDef.subclasses[0].subclassId);
+
+                if (clsDef != null && clsDef.starterDomains.Count > 0)
                 {
-                    character.stats.sleightOfHand = 2;      // Ловкость рук (взлом)
-                    character.stats.attentiveness = 2;      // Внимательность / Проницательность (наркотик Елей)
-                    character.stats.magic = 1;              // Магия / Аркана (машина)
-                    character.stats.trickery = 2;           // Плутовство / Соблазнение (NSFW)
-                    character.stats.bodyPower = 1;          // Мощность тела (вырыв кандалов)
-                    character.stats.bodyKnowledge = 1;      // Знания тела
-                    character.stats.RecalculateDerivedStats();
+                    CharacterCreation.Instance.SelectFirstDomain(clsDef.starterDomains[0]);
+                    // Второй домен — любой другой; берём Body если можно, иначе Charm.
+                    var second = DomainType.Body;
+                    if (second == clsDef.starterDomains[0]) second = DomainType.Charm;
+                    CharacterCreation.Instance.SelectSecondDomain(second);
+
+                    var available = CharacterCreation.Instance.GetAvailableCards();
+                    for (int i = 0; i < 2 && i < available.Count; i++)
+                        CharacterCreation.Instance.ToggleCard(available[i].cardId);
                 }
-                Debug.Log($"[DialogueTestRunner] Configured Player: {testName} ({testRace} {testClass}, {testGender}) | HP: {character?.stats.currentHP}");
+
+                var character = CharacterCreation.Instance.FinalizeCharacter();
+                Debug.Log($"[DialogueTestRunner] Configured Player: {testName} ({testRace} {testClass}, {testGender}) | HP-slots: {character?.stats.maxHealthSlots}");
             }
 
             // Ждем один кадр, чтобы методы Start() у всех созданных UI компонентов гарантированно выполнились
