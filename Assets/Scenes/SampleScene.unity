@@ -499,7 +499,7 @@ MonoBehaviour:
   delayBeforeStart: 0.5
   autoCreateTestCharacter: 1
   testName: "\u0420\u0435\u0439\u043D\u0430"
-  testRace: 1
+  testRace: 5
   testClass: 2
   testGender: 1
 --- !u!1660057539 &9223372036854775807

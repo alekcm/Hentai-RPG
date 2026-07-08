@@ -348,6 +348,10 @@ namespace RPG.Combat
                     rollCtx.disadvantage = true;
             }
 
+            // По ГДД: атаки по Уязвимой цели совершаются с преимуществом (+d6 к броску попадания).
+            if (target.HasEffectId("vulnerable_temp") || target.HasEffectId("vulnerable_next_attack"))
+                rollCtx.advantage = true;
+
             RollOutcome roll;
             if (attacker.side == CombatSide.Player)
             {
@@ -431,9 +435,17 @@ namespace RPG.Combat
             // --- Урон ---
             string effectiveDice = damageDiceOverride ?? weapon.damageDice;
             bool rerollLow = attacker.character != null && attacker.character.GetFlag(PassiveEffectsRegistry.FlagNoWay);
+            // "Мощное" оружия + МБИ «Устойчивая» дают преимущество кости урона
+            // (доп. кость, отбросить наименьшую). Не применяется к карт-урону.
+            bool weaponDmgAdv = damageDiceOverride == null && !isSpell
+                                && (weapon.damageAdvantage
+                                    || (attacker.side == CombatSide.Player
+                                        && ClassFeaturesBus.StanceGrantsDamageAdvantage(attacker)));
+            bool explodingMax = attacker.side == CombatSide.Player
+                                && ClassFeaturesBus.StanceGrantsExplodingMax(attacker);
             int raw = damageOverride >= 0
                     ? damageOverride
-                    : RollDamage(effectiveDice, rerollLow);
+                    : RollDamage(effectiveDice, rerollLow, weaponDmgAdv, explodingMax);
 
             // Оффхенд-бонус "Малый кинжал" — +2 если цель вплотную.
             if (attacker.side == CombatSide.Player && !isSpell && !inBeastForm)
@@ -443,24 +455,20 @@ namespace RPG.Combat
                     raw += 2;
             }
 
-            // ПЛУТ: Подлая атака (+N × d6) — считает, что есть преимущество (buff уже сброшен) ИЛИ союзник вплотную.
+            // ПЛУТ: Подлая атака (+N × d6, +плоский бонус от подкласса).
             if (attacker.side == CombatSide.Player && !isSpell && damageOverride < 0)
             {
                 int sneakDice = ClassFeaturesBus.GetSneakAttackBonusDice(attacker, target);
                 for (int i = 0; i < sneakDice; i++) raw += UnityEngine.Random.Range(1, 7);
+                raw += ClassFeaturesBus.GetSneakAttackFlatBonus(attacker, target);
             }
 
             // ВОИН-Берсерк: +заряды к урону.
             int berserker = ClassFeaturesBus.GetBerserkerDamageBonus(attacker);
             if (berserker > 0) raw += berserker;
 
-            // МБИ: стойка (Устойчивая — доп. кость и отброс наименьшей).
-            {
-                int rawBefore = raw;
-                ClassFeaturesBus.ApplyStanceModifiers(attacker, ref raw, effectiveDice);
-                if (raw != rawBefore)
-                    Debug.Log($"[Combat] Стойка модифицировала урон {rawBefore} → {raw}");
-            }
+            // МБИ, стойки — теперь модифицируют бросок урона на этапе RollDamage через флаги
+            // weaponDmgAdv / стойка. См. блок выше, где `raw` уже получен.
 
             // Метамагия: удвоить одну кость урона — просто добавим ~половину сырого урона (грубый эквивалент).
             if (isSpell && attacker.character != null && attacker.character.GetFlag("metamagic_pending_double_die"))
@@ -476,9 +484,8 @@ namespace RPG.Combat
                 raw += UnityEngine.Random.Range(1, 7);
             }
 
-            // Уязвимость — цель получает +50% урона.
-            if (target.HasEffectId("vulnerable_temp") || target.HasEffectId("vulnerable_next_attack"))
-                raw = Mathf.RoundToInt(raw * 1.5f);
+            // Уязвимость НЕ повышает урон (правило ГДД: атаки по Уязвимой цели совершаются с преимуществом).
+            // Преимущество применяется до броска попадания — см. блок «Уязвимость даёт преимущество» выше RollDuality.
 
             // Броненосец (Друид): сопротивление физическому урону.
             if (target.character != null && target.character.GetFlag("armadillo_resist_physical")
@@ -840,7 +847,8 @@ namespace RPG.Combat
         //  Утилиты
         // ============================================================
 
-        public int RollDamage(string dice, bool rerollLowOnes = false)
+        public int RollDamage(string dice, bool rerollLowOnes = false,
+                              bool weaponDamageAdvantage = false, bool explodingOnMax = false)
         {
             // Формат: [N]d<sides>[+X].
             if (string.IsNullOrEmpty(dice)) return 0;
@@ -858,8 +866,17 @@ namespace RPG.Combat
             if (dIdx > 0) int.TryParse(dice.Substring(0, dIdx), out count);
             int.TryParse(dice.Substring(dIdx + 1), out var sides);
             if (sides <= 0) return plus;
-            int sum = 0;
+
             int n = Mathf.Max(1, count);
+
+            // При «преимуществе кости» (Двуручный меч, Двуручный посох «Мощное», МБИ «Устойчивая»)
+            // кидаем на 1 кость больше и отбрасываем наименьшую.
+            if (weaponDamageAdvantage) n += 1;
+
+            int sum = 0;
+            int worst = int.MaxValue;
+            int explosionSafety = 6; // предохранитель от бесконечной цепочки взрывов
+
             for (int i = 0; i < n; i++)
             {
                 int r = UnityEngine.Random.Range(1, sides + 1);
@@ -871,7 +888,24 @@ namespace RPG.Combat
                         r = UnityEngine.Random.Range(1, sides + 1);
                 }
                 sum += r;
+                if (r < worst) worst = r;
+                // МБИ «Брутальная»: если выпал максимум, кидаем доп. кость (не отбрасывается).
+                if (explodingOnMax && r == sides && explosionSafety-- > 0)
+                {
+                    int extra = UnityEngine.Random.Range(1, sides + 1);
+                    if (rerollLowOnes)
+                    {
+                        int s2 = 5;
+                        while ((extra == 1 || extra == 2) && s2-- > 0)
+                            extra = UnityEngine.Random.Range(1, sides + 1);
+                    }
+                    sum += extra;
+                    // Взрыв рекурсивно: если снова макс — ещё кость.
+                    if (extra == sides && explosionSafety > 0) i--;
+                }
             }
+            if (weaponDamageAdvantage) sum -= worst;
+
             return sum + plus;
         }
 

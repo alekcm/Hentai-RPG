@@ -52,8 +52,8 @@ namespace RPG.Character
         public int evasion = 10;
 
         [Header("Stamina")]
-        public int maxStamina = 1;
-        public int currentStamina = 1;
+        public int maxStamina = 2;
+        public int currentStamina = 2;
 
         [Header("Skill entries (proficiencies etc — не используется в базовой ГДД-модели, оставлено под расширения)")]
         public List<SkillEntry> skills = new();

@@ -64,7 +64,9 @@ namespace RPG.Character
                 switch (f.featureId)
                 {
                     case "human_high_stamina":
-                        stats.maxStamina = Mathf.Max(stats.maxStamina, 2);
+                        // По ГДД: +1 к максимуму Выносливости.
+                        // Все персонажи теперь стартуют с 2, у человека будет 3.
+                        stats.maxStamina += 1;
                         stats.currentStamina = stats.maxStamina;
                         break;
                     // "orc_hardy" (стойкий) обрабатывается в бою по условию.

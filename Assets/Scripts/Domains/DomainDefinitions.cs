@@ -273,10 +273,9 @@ namespace RPG.Domains
             new DomainCard {
                 cardId = "nature_1_regeneration",
                 domain = DomainType.Nature, displayName = "Регенерация",
-                description = "Коснитесь существа, потратьте 3 Надежды — восполните 1d4 шкал здоровья и восстановите Выносливость.",
+                description = "Коснитесь существа, потратьте 3 Надежды — восполните 3 шкалы здоровья и восстановите Выносливость.",
                 activation = CardActivation.Manual,
-                cost = new CardCost { hope = 3 },
-                damageDice = "1d4"
+                cost = new CardCost { hope = 3 }
             },
             new DomainCard {
                 cardId = "nature_1_elemental_guardian",

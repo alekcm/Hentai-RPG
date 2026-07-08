@@ -92,6 +92,8 @@ namespace RPG.Character
             character.knownDomainCards.Clear();
             var def = ClassDatabase.GetClass(cls);
             character.stats.evasion = def.baseEvasion;
+            character.stats.maxHealthSlots = def.baseHealthSlots;
+            character.stats.usedHealthSlots = 0;
             return true;
         }
 
@@ -196,6 +198,20 @@ namespace RPG.Character
             return true;
         }
 
+        /// <summary>Применить перманентные модификаторы подкласса (Боевой маг +1 ячейка ран, Адепт +1 к навыку и т.п.).</summary>
+        private void ApplySubclassCreationEffects(ClassDefinition cls)
+        {
+            if (cls == null || string.IsNullOrEmpty(character.subclassId)) return;
+            switch (character.subclassId)
+            {
+                case "mage_school_of_war":
+                    // "Боевой маг": +1 ячейка ран.
+                    character.stats.maxHealthSlots += 1;
+                    break;
+                // Прочие подклассовые перманентки применяются в бою через флаги PassiveEffectsRegistry.
+            }
+        }
+
         // ---------- 8. Финализация ----------
 
         public bool CanFinalize()
@@ -237,6 +253,9 @@ namespace RPG.Character
 
             // Применяем броню к статам.
             ItemDatabase.ApplyEquippedGear(character);
+
+            // Подклассовые модификаторы, применяемые вне боя (перманентные).
+            ApplySubclassCreationEffects(cls);
 
             // Раса — пассивные особенности (например, +1 к макс. Выносливости у человека).
             character.Initialize();

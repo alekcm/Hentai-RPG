@@ -23,7 +23,7 @@ namespace RPG.Combat
     ///  ПЛУТ:
     ///   — Подлая атака (+половина уровня d6 при преимуществе или союзнике вплотную).
     ///   Подклассы:
-    ///   — Гильдия Палачей: Первый удар (первая успешная атака ×2), Внезапная атака (+1d6 к Подлой).
+    ///   — Гильдия Палачей: Первый удар (первая успешная атака ×2), Точный порез (+1 плоский к Подлой атаке).
     ///   — Гильдия Отравителей: Токсичные смеси (жетоны, применяются к атаке).
     ///
     ///  ВОЛШЕБНИК:
@@ -95,19 +95,31 @@ namespace RPG.Combat
         //   Публичные API (вызываются из UI / CombatManager)
         // ================================================================
 
-        /// <summary>Модификатор урона Подлой атаки: +N × d6 (N = уровень/2, +1 если Гильдия Палачей).</summary>
-        public static int GetSneakAttackBonusDice(CombatUnit u, CombatUnit target)
+        /// <summary>Условие Подлой атаки — атака с преимуществом ИЛИ союзник вплотную к цели.</summary>
+        private static bool SneakAttackApplies(CombatUnit u, CombatUnit target)
         {
-            if (u?.character == null || u.character.characterClass != ClassType.Rogue) return 0;
+            if (u?.character == null || u.character.characterClass != ClassType.Rogue) return false;
             var cm = CombatManager.Instance;
-            // Условие: атака с преимуществом ИЛИ союзник вплотную к цели.
-            bool advOrAlly = u.buffAttackBonusNextRoll > 0
+            if (cm == null || target == null) return false;
+            return u.buffAttackBonusNextRoll > 0
                 || cm.AllUnits.Any(a => a != u && a.side == u.side && !a.IsDead
                     && CombatManager.ManhattanDistance(a.gridPosition, target.gridPosition) <= 1);
-            if (!advOrAlly) return 0;
-            int n = Mathf.Max(1, u.stats.level / 2);
-            if (u.character.subclassId == "rogue_executioners_guild") n += 1;
-            return n;
+        }
+
+        /// <summary>Кол-во d6, которые Плут добавляет к урону от Подлой атаки: половина уровня, минимум 1.</summary>
+        public static int GetSneakAttackBonusDice(CombatUnit u, CombatUnit target)
+        {
+            if (!SneakAttackApplies(u, target)) return 0;
+            return Mathf.Max(1, u.stats.level / 2);
+        }
+
+        /// <summary>Плоский бонус урона от подкласса к Подлой атаке.
+        /// Гильдия Палачей / «Точный порез»: +1 к Подлой.</summary>
+        public static int GetSneakAttackFlatBonus(CombatUnit u, CombatUnit target)
+        {
+            if (!SneakAttackApplies(u, target)) return 0;
+            if (u.character.subclassId == "rogue_executioners_guild") return 1;
+            return 0;
         }
 
         /// <summary>Плут-Отравитель: сколько жетонов сейчас у юнита.</summary>
@@ -548,29 +560,13 @@ namespace RPG.Combat
         public static int GetBerserkerDamageBonus(CombatUnit u)
             => u?.character?.subclassId == "warrior_berserker" ? GetBerserkerCharges(u) : 0;
 
-        /// <summary>Мастер БИ: постоянные модификаторы стойки.</summary>
-        public static void ApplyStanceModifiers(CombatUnit u, ref int rawDamage, string weaponDice, System.Random _unused = null)
-        {
-            var stance = GetStance(u);
-            if (stance == null) return;
+        /// <summary>Даёт ли текущая стойка юнита «преимущество кости урона» (Устойчивая).
+        /// Проверяется в CombatManager.RollDamage.</summary>
+        public static bool StanceGrantsDamageAdvantage(CombatUnit u) => GetStance(u) == "sturdy";
 
-            var cm = CombatManager.Instance;
-
-            switch (stance)
-            {
-                case "brutal":
-                    // Если выпал максимум — добавляем ещё одну кость.
-                    // Здесь можно только грубо оценить: сравним rawDamage с максимально возможным для weaponDice.
-                    // Реализация упрощена: с шансом 1/(sides) считаем максимум и добавляем.
-                    // Точная реализация должна быть на уровне RollDamage; здесь оставлена как no-op.
-                    break;
-                case "sturdy":
-                    // Ещё одна кость + отбросить меньшую.
-                    int extra = cm.RollDamage(SidesOnly(weaponDice));
-                    rawDamage = Mathf.Max(rawDamage, rawDamage + extra - Mathf.Min(rawDamage, extra));
-                    break;
-            }
-        }
+        /// <summary>Даёт ли стойка «взрыв» на максимуме кости (Брутальная).
+        /// Проверяется в CombatManager.RollDamage — если да, на кости выпал максимум → доп. кость (не отбрасывается).</summary>
+        public static bool StanceGrantsExplodingMax(CombatUnit u) => GetStance(u) == "brutal";
 
         /// <summary>МБИ: Быстрая — при Броске Атаки потратить Выносливость → включить доп. цель.
         /// Вызывается из UI после успешного нацеливания.</summary>
@@ -620,9 +616,10 @@ namespace RPG.Combat
         //   Утилиты
         // ================================================================
 
+        // (Утилита SidesOnly удалена: логика перенесена в CombatManager.RollDamage через флаги стойки.)
         private static string SidesOnly(string dice)
         {
-            // Из "d10+3" → "d10", из "2d6+1" → "d6". Возвращает одну кость того же типа без плюса.
+            // Оставлено на случай будущего использования — не вызывается.
             var lower = (dice ?? "d6").ToLower().Replace(" ", "");
             int dIdx = lower.IndexOf('d');
             if (dIdx < 0) return "d6";

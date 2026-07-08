@@ -462,8 +462,7 @@ namespace RPG.Domains
         private static CardResult Cast_Regeneration(CombatUnit u, CardContext ctx)
         {
             if (ctx.primaryTarget == null) return CardResult.Fail("Нужна цель.");
-            var cm = CombatManager.Instance;
-            int slots = cm.RollDamage("1d4");
+            const int slots = 3; // Стабильные 3 шкалы (по обновлённым правилам)
             ctx.primaryTarget.stats.HealHealthSlots(slots);
             ctx.primaryTarget.stats.RestoreStamina(1);
             return CardResult.Ok($"Регенерация: восстановлено {slots} шкал здоровья и Выносливость.",

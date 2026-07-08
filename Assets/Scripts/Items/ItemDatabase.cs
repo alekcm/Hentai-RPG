@@ -43,6 +43,8 @@ namespace RPG.Items
         public int evasionMod;               // модификатор к Уклонению от оружия
         public int armorRatingMod;           // модификатор к Показателю Брони (для щитов)
         public int attackRollBonus;          // например Палаш +1 к атаке
+        /// <summary>«Мощное»/«с преимуществом кости»: бросить доп. кость урона и отбросить наименьший результат.</summary>
+        public bool damageAdvantage;
 
         public string ItemId => itemId;
         public string DisplayName => displayName;
@@ -126,6 +128,15 @@ namespace RPG.Items
                 damageDice = "d10+3", damageKind = DamageKind.Physical
             });
             Register(new WeaponDefinition {
+                itemId = "weapon_two_handed_sword", displayName = "Двуручный меч",
+                slot = WeaponSlot.Main, hand = WeaponHand.TwoHanded,
+                attackSkill = SkillType.BodyPower, range = WeaponRange.Melee,
+                damageDice = "d10+3", damageKind = DamageKind.Physical,
+                evasionMod = -1,
+                damageAdvantage = true,
+                specialText = "−1 к Уклонению; при успешной атаке бросьте доп. кость урона и отбросьте наименьший результат."
+            });
+            Register(new WeaponDefinition {
                 itemId = "weapon_dagger", displayName = "Кинжал",
                 slot = WeaponSlot.Main, hand = WeaponHand.OneHanded,
                 attackSkill = SkillType.SleightOfHand, range = WeaponRange.Melee,
@@ -142,6 +153,7 @@ namespace RPG.Items
                 slot = WeaponSlot.Main, hand = WeaponHand.TwoHanded,
                 attackSkill = SkillType.AcademicKnowledge, range = WeaponRange.VeryFar,
                 damageDice = "d6", damageKind = DamageKind.Magical,
+                damageAdvantage = true,
                 specialText = "Мощное: при успехе бросьте доп. кость урона и отбросьте наименьший."
             });
             Register(new WeaponDefinition {

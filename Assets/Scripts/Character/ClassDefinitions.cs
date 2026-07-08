@@ -23,8 +23,11 @@ namespace RPG.Character
         /// <summary>Домены, из которых игрок обязан выбрать первый (привязанный к классу) домен.</summary>
         public List<DomainType> starterDomains = new();
 
-        /// <summary>Начальное Уклонение (по ГДД обычно 9–11).</summary>
+        /// <summary>Начальное Уклонение (по ГДД обычно 9–12).</summary>
         public int baseEvasion = 10;
+
+        /// <summary>Стартовое количество ячеек здоровья (шкал ран).</summary>
+        public int baseHealthSlots = 6;
 
         /// <summary>Классовая особенность — работает автоматически или через флаги в CombatManager.</summary>
         public ClassFeature classFeature;
@@ -71,7 +74,8 @@ namespace RPG.Character
                 classType = ClassType.Warrior,
                 displayName = "Воин",
                 description = "Мастер оружия и обороны. Стойкий защитник передовой.",
-                baseEvasion = 10,
+                baseEvasion = 11,
+                baseHealthSlots = 6,
                 starterDomains = new() { DomainType.Weapon, DomainType.Defense },
                 classFeature = new ClassFeature
                 {
@@ -153,7 +157,8 @@ namespace RPG.Character
                 classType = ClassType.Rogue,
                 displayName = "Плут",
                 description = "Скрытный убийца или отравитель. Работает по слабостям и позициям.",
-                baseEvasion = 11,
+                baseEvasion = 12,
+                baseHealthSlots = 4,
                 starterDomains = new() { DomainType.Body, DomainType.Weapon, DomainType.Charm },
                 classFeature = new ClassFeature
                 {
@@ -178,9 +183,9 @@ namespace RPG.Character
                                 description = "Первая успешная атака в бою наносит удвоенный урон."
                             },
                             new ClassFeature {
-                                featureId = "executioner_sudden_attack",
-                                displayName = "Внезапная атака",
-                                description = "Ваша Подлая атака наносит ещё 1d6 урона."
+                                featureId = "executioner_precise_cut",
+                                displayName = "Точный порез",
+                                description = "Ваша Подлая атака наносит дополнительно +1 урона."
                             }
                         }
                     },
@@ -211,7 +216,8 @@ namespace RPG.Character
                 classType = ClassType.Mage,
                 displayName = "Волшебник",
                 description = "Заклинатель, изучающий магию как ремесло. Уязвим в ближнем, силён на дистанции.",
-                baseEvasion = 9,
+                baseEvasion = 11,
+                baseHealthSlots = 5,
                 starterDomains = new() { DomainType.Magic },
                 classFeature = new ClassFeature
                 {
@@ -286,7 +292,8 @@ namespace RPG.Character
                 classType = ClassType.Cleric,
                 displayName = "Священник",
                 description = "Бывший (или всё ещё?) служитель. В Веридии — тонкая грань между надеждой и ересью.",
-                baseEvasion = 10,
+                baseEvasion = 9,
+                baseHealthSlots = 7,
                 starterDomains = new() { DomainType.Light, DomainType.Terror },
                 classFeature = new ClassFeature
                 {
@@ -359,6 +366,7 @@ namespace RPG.Character
                 displayName = "Друид",
                 description = "Оборотень и хранитель природы. В Веридии природа не «чиста» — она страдает от Морали.",
                 baseEvasion = 10,
+                baseHealthSlots = 6,
                 starterDomains = new() { DomainType.Nature },
                 classFeature = new ClassFeature
                 {
