@@ -1,0 +1,50 @@
+{
+  "dialogueId": "prologue_room3_orc_gate",
+  "displayName": "Ворота орков — Placeholder",
+  "speakerId": "npc_orc_gate",
+  "speakerName": "Орк у ворот",
+  "context": {
+    "requiredQuestId": "",
+    "requiredQuestState": "",
+    "requiredFlags": [],
+    "forbiddenFlags": [],
+    "campOnly": false,
+    "minCompanionAffinity": 0,
+    "maxCompanionAffinity": 100,
+    "isNSFW": false,
+    "minLevel": 1
+  },
+  "nodes": [
+    {
+      "nodeId": "r3_placeholder_start",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "[PLACEHOLDER ROOM 3]\n\nЗа решёткой уже слышен спор двух орков о том, кто сильнее и кому первым ломать путь наружу. Здесь должна начинаться следующая сцена пролога: выбор между орком и орчихой, первая демонстрация LLM и выход из блока.\n\nПока что это техническая заглушка, чтобы room1 -> room2 -> room3 прогонялся без ошибок.",
+      "choices": [],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    }
+  ],
+  "startNodeId": "r3_placeholder_start",
+  "allowLLMModification": true,
+  "llmModifications": []
+}

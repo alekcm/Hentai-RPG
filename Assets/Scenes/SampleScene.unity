@@ -442,6 +442,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2003405263}
   - component: {fileID: 2003405262}
+  - component: {fileID: 2003405264}
   m_Layer: 0
   m_Name: GameBootstrap
   m_TagString: Untagged
@@ -482,6 +483,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2003405264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2003405261}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de389a4a7bbd0494eb543bdf5bc5daf0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RPG.Dialogue.DialogueTestRunner
+  dialogueToTest: prologue_room1_purification_chamber
+  delayBeforeStart: 0.5
+  autoCreateTestCharacter: 1
+  testName: "\u0420\u0435\u0439\u043D\u0430"
+  testRace: 5
+  testClass: 2
+  testGender: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

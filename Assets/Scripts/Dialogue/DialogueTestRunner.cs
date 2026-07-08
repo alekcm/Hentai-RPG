@@ -15,7 +15,7 @@ namespace RPG.Dialogue
     public class DialogueTestRunner : MonoBehaviour
     {
         [Header("Test Settings")]
-        [SerializeField] private string dialogueToTest = "prologue_room1_purification_chamber";
+        [SerializeField] private string dialogueToTest = "prologue_room1_purification_chamber_rework";
         [SerializeField] private float delayBeforeStart = 0.5f;
         [SerializeField] private bool autoCreateTestCharacter = true;
 
@@ -33,6 +33,12 @@ namespace RPG.Dialogue
         private IEnumerator RunTestRoutine()
         {
             yield return new WaitForSeconds(delayBeforeStart);
+
+            if (dialogueToTest == "prologue_room1_purification_chamber")
+            {
+                Debug.LogWarning("[DialogueTestRunner] Legacy dialogue id detected in serialized field. Auto-switching to rework id.");
+                dialogueToTest = "prologue_room1_purification_chamber_rework";
+            }
 
             Debug.Log("[DialogueTestRunner] Initializing automated dialogue test environment...");
 

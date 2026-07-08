@@ -22,6 +22,7 @@ namespace RPG.Dialogue
         private DialogueGraph currentDialogue;
         private DialogueNode currentNode;
         private bool isDialogueActive;
+        private bool pendingDialogueTransition;
         private Stack<string> dialogueHistory = new();
         private List<DialogueResult> sessionResults = new();
 
@@ -68,8 +69,20 @@ namespace RPG.Dialogue
 
             if (!allDialogues.TryGetValue(dialogueId, out var dialogue))
             {
-                Debug.LogError($"[DialogueManager] Dialogue not found: {dialogueId}");
-                return false;
+                string fallbackId = dialogueId.EndsWith("_rework")
+                    ? dialogueId.Replace("_rework", "")
+                    : dialogueId + "_rework";
+
+                if (allDialogues.TryGetValue(fallbackId, out dialogue))
+                {
+                    Debug.LogWarning($"[DialogueManager] Dialogue '{dialogueId}' not found, using fallback '{fallbackId}'");
+                    dialogueId = fallbackId;
+                }
+                else
+                {
+                    Debug.LogError($"[DialogueManager] Dialogue not found: {dialogueId}");
+                    return false;
+                }
             }
 
             // Проверяем контекст
@@ -82,6 +95,7 @@ namespace RPG.Dialogue
             currentDialogue = dialogue;
             currentNode = dialogue.GetStartNode();
             isDialogueActive = true;
+            pendingDialogueTransition = false;
             dialogueHistory.Clear();
             sessionResults.Clear();
 
@@ -153,6 +167,10 @@ namespace RPG.Dialogue
                 if (currentDialogue.speakerId != null)
                     GameManager.Instance.EventBus.RaiseQuestTagSet(currentDialogue.speakerId, choice.questTag);
             }
+
+            // Если выбор уже инициировал переход в другой диалог, не продолжаем навигацию по текущему графу
+            if (pendingDialogueTransition)
+                return;
 
             // Навигация
             if (!string.IsNullOrEmpty(choice.nextNodeId))
@@ -246,6 +264,9 @@ namespace RPG.Dialogue
         {
             if (currentNode == null) return;
 
+            // Сбрасываем флаг перехода; onEnterActions текущего узла могут выставить его заново
+            pendingDialogueTransition = false;
+
             // Выполняем действия входа
             foreach (var action in currentNode.onEnterActions)
             {
@@ -303,6 +324,10 @@ namespace RPG.Dialogue
 
             // Представляем узел UI
             OnNodePresented?.Invoke(presentationNode);
+
+            // Если узел уже инициировал переход в другой диалог, не запускаем автопродвижение/автозавершение
+            if (pendingDialogueTransition)
+                return;
 
             // Автоматическое продвижение если нет выборов
             if (currentNode.choices.Count == 0 && !currentNode.IsEndNode)
@@ -522,6 +547,7 @@ namespace RPG.Dialogue
                     Combat.CombatManager.Instance?.StartCombat(action.parameter1);
                     break;
                 case DialogueActionType.StartDialogue:
+                    pendingDialogueTransition = true;
                     StartCoroutine(StartNextDialogueDelayed(action.parameter1));
                     break;
             }
@@ -644,6 +670,9 @@ namespace RPG.Dialogue
         /// </summary>
         public void LoadAllDialogues()
         {
+            int loadedFromResources = 0;
+            int loadedFromStreaming = 0;
+
             // 1. Загрузка из Resources/Dialogues (встроенные ассеты)
             var resourceFiles = Resources.LoadAll<TextAsset>("Dialogues");
             foreach (var textAsset in resourceFiles)
@@ -654,6 +683,7 @@ namespace RPG.Dialogue
                     if (dialogue != null && !string.IsNullOrEmpty(dialogue.dialogueId))
                     {
                         RegisterDialogue(dialogue);
+                        loadedFromResources++;
                         Debug.Log($"[DialogueManager] Loaded JSON from Resources: {dialogue.dialogueId}");
                     }
                 }
@@ -677,6 +707,7 @@ namespace RPG.Dialogue
                         if (dialogue != null && !string.IsNullOrEmpty(dialogue.dialogueId))
                         {
                             RegisterDialogue(dialogue);
+                            loadedFromStreaming++;
                             Debug.Log($"[DialogueManager] Loaded JSON from StreamingAssets: {dialogue.dialogueId}");
                         }
                     }
@@ -686,6 +717,12 @@ namespace RPG.Dialogue
                     }
                 }
             }
+            else
+            {
+                Debug.LogWarning($"[DialogueManager] StreamingAssets/Dialogues folder not found: {streamingPath}");
+            }
+
+            Debug.Log($"[DialogueManager] Dialogue load summary -> Resources: {loadedFromResources}, StreamingAssets: {loadedFromStreaming}, Total registered: {allDialogues.Count}");
         }
 
         #endregion

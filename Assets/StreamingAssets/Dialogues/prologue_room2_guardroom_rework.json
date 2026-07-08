@@ -1,0 +1,2985 @@
+{
+  "dialogueId": "prologue_room2_guardroom_rework",
+  "displayName": "Караульня — Пролог (rework)",
+  "speakerId": "npc_guard_gort",
+  "speakerName": "Брат Горт",
+  "context": {
+    "requiredQuestId": "",
+    "requiredQuestState": "",
+    "requiredFlags": [],
+    "forbiddenFlags": [],
+    "campOnly": false,
+    "minCompanionAffinity": 0,
+    "maxCompanionAffinity": 100,
+    "isNSFW": true,
+    "minLevel": 1
+  },
+  "nodes": [
+    {
+      "nodeId": "r2_00_router",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Тяжёлая дверь остаётся позади. Дальше — караульня тюремного блока Инквизиции. То, как именно ты входишь в неё, зависит от того, чем закончилась первая комната.",
+      "choices": [
+        {
+          "choiceId": "c_r2_route_bound",
+          "text": "Продолжить",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_40_bound_entry",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Bound_To_Guards",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_route_vael_ahead",
+          "text": "Продолжить",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_20_vael_ahead_entry",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Bound_To_Guards",
+              "value": "true",
+              "invert": true
+            },
+            {
+              "conditionType": 0,
+              "parameter": "R1_Vael_EscapedAhead",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_route_standard",
+          "text": "Продолжить",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_01_standard_entry",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Bound_To_Guards",
+              "value": "true",
+              "invert": true
+            },
+            {
+              "conditionType": 0,
+              "parameter": "R1_Vael_EscapedAhead",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_01_standard_entry",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "[Звук: треск углей, стук деревянных кружек, ленивый смех.]\n\nТы выходишь в караульню блока. У жаровни за столом сидят Брат Горт и Брат Бруно — два тяжёлых, распущенных от вина стража Инквизиции. Их алебарды и тяжёлые арбалеты стоят у стены в шаге от руки.\n\nПеред тобой три очевидных типа хода: пройти как свой, обойти их тихо или сломать сцену в хаос.",
+      "choices": [
+        {
+          "choiceId": "c_r2_std_disguise",
+          "text": "Пройти в открытую в инквизиторской сутане",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_02_disguise_eval",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 1,
+              "parameter": "item_inquisition_roam_disguise",
+              "value": "",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_stealth",
+          "text": "Прокрасться мимо охраны в тени колонны",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 7,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_05_stealth_success",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_stealth_window",
+          "text": "Прокрасться в идеальный момент, пока они спорят из-за карт",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_05_stealth_success",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "P2_Cards_Window",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_distract_noise",
+          "text": "Отвлечь охрану шумом в дальнем коридоре",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_06_distract_success",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_distract_magic",
+          "text": "Создать ложный свет или шаги магией",
+          "skillCheck": {
+            "skillType": 7,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_06_distract_success",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 12,
+              "parameter": "",
+              "value": "Mage,Druid,Cleric",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_attack",
+          "text": "Напасть в открытую и рассчитывать на хаос",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_10_fear_conflict_start",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_std_tiefling_omen",
+          "text": "Подогреть их суеверие: сделать вид, что Свет уже карает караульню за пьянство",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_07_tiefling_superstition",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 9,
+              "parameter": "",
+              "value": "Tiefling",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 4,
+        "difficultyClass": 6,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "Наблюдая за их руками и монетами, ты понимаешь: они вошли в ту часть карточной партии, где оба почти не отрывают взгляд от стола. Прокрасться сейчас будет проще.",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": "P2_Cards_Window"
+    },
+    {
+      "nodeId": "r2_02_disguise_eval",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Свет жаровни скользит по твоей сутане. Один взгляд может пустить всё прахом — или наоборот, превратить тебя для них в ещё одного уставшего церковного винтика.",
+      "choices": [
+        {
+          "choiceId": "c_r2_disguise_clean",
+          "text": "Продолжить как в чистой сутане",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_03_clean_disguise_social",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Disguise_Clean",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_disguise_bloody",
+          "text": "Продолжить в испачканной кровью сутане",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_04_bloody_disguise_social",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Disguise_Bloody",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_03_clean_disguise_social",
+      "speakerType": 0,
+      "speakerId": "npc_guard_bruno",
+      "text": "Бруно лениво поднимает кружку: «О, братец... Ты от новичка? Как там Ваэль, не обмочился ещё от первого ритуала?» Горт смотрит не сразу — и именно это делает момент ценным. Сейчас для них ты либо ещё один служка в золотой тряпке, либо повод встать из-за стола.",
+      "choices": [
+        {
+          "choiceId": "c_r2_clean_brief",
+          "text": "Коротко отбрехаться и пройти дальше",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_30_guardroom_hub_free",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_clean_join_table",
+          "text": "Подсесть к столу на минуту и воспользоваться их расслабленностью",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_08_stole_table_gold",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_04_bloody_disguise_social",
+      "speakerType": 0,
+      "speakerId": "npc_guard_gort",
+      "text": "На твоей одежде слишком много чужой крови, чтобы просто пройти мимо. Горт щурится: «Что за дрянь у вас там стряслось?» Здесь уже недостаточно уверенности. Нужна версия, после которой им станет лень копать глубже.",
+      "choices": [
+        {
+          "choiceId": "c_r2_bloody_ritual_failed",
+          "text": "Сказать, что ритуал сорвался и пленник повредил служителю",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_09_bloody_pass",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_bloody_blame_vael",
+          "text": "Свалить всё на Ваэля и приказать им заняться его бардаком позже",
+          "skillCheck": {
+            "skillType": 6,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_09_bloody_pass",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_05_stealth_success",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты проскальзываешь за колонной и оказываешься у стены со стойкой оружия, всего в паре шагов от стражи. Они слишком увлечены картами и вином, чтобы сразу заметить тень за своими спинами.",
+      "choices": [
+        {
+          "choiceId": "c_r2_stealth_steal_weapons",
+          "text": "Бесшумно снять со стойки арбалет и алебарду",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_60_loot_rack",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_stealth_pass",
+          "text": "Не рисковать и просто пройти к дальнему концу караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_06_distract_success",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Громкий стук в дальнем коридоре мгновенно ломает их ленивую расслабленность. Оба стражника хватаются за оружие и, ругаясь, уходят проверять шум. Караульня остаётся почти пустой — по крайней мере на пару драгоценных минут.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_30_guardroom_hub_free",
+      "autoAdvanceDelay": 3.5,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Distracted",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_07_tiefling_superstition",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты не давишь на них силой — ты даёшь их собственной религиозной трусости всё дорисовать самой. Горт смотрит то на жаровню, то на тени, то в кружку с вином и уже почти видит в караульне дурной знак. Бруно ворчит, но уверенности в его голосе уже меньше.",
+      "choices": [
+        {
+          "choiceId": "c_r2_tiefling_leave",
+          "text": "Пока они спорят с собственными суевериями, спокойно пройти дальше",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_tiefling_turn",
+          "text": "Подтолкнуть их к мысли, что за этот бардак их обоих сожрёт Изольда",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_11_fear_manifest_social",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Suspicious",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_08_stole_table_gold",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты чокаешься с ними кружкой, говоришь ровно столько, сколько нужно, и заодно смахиваешь со стола тяжелый кошель. Ни один из них не трезв настолько, чтобы заметить, куда исчезло золото.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_30_guardroom_hub_free",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 4,
+          "parameter1": "",
+          "parameter2": "",
+          "intValue": 50,
+          "boolValue": false
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R2_Table_Looted",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_09_bloody_pass",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Версия звучит достаточно мерзко и достаточно правдоподобно, чтобы стража не захотела лезть в детали. Они морщатся, ругают новичка и предпочитают остаться с вином, а не с твоим окровавленным рассказом.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_30_guardroom_hub_free",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Suspicious",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_20_vael_ahead_entry",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "[Звук: сбивчивый молодой голос, ругань старших, звон кружки о стол.]\n\nТы входишь в караульню и сразу видишь, что Ваэль добежал первым. Он уже что-то наговаривает Горту и Бруно — не поднимая тревогу по всем правилам, а пытаясь по-тихому спрятать свой провал за чужими руками. При виде тебя все трое замирают. Теперь это не просто проход мимо охраны, а треугольник: ты, Ваэль и два старших пьяницы, которым очень не хочется разбираться по уставу.",
+      "choices": [
+        {
+          "choiceId": "c_r2_vael_blackmail",
+          "text": "Напомнить Ваэлю про Елей прямо при старших",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_21_vael_blackmail_public",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Got_Elei",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_vael_dominate",
+          "text": "Холодно приказать Ваэлю подтвердить твою версию происходящего",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_24_vael_covers_for_player",
+            "failureNodeId": "r2_25_vael_breaks_down"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Vael_Cowed",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_vael_obsessed",
+          "text": "Поймать его взгляд и дать понять, что он всё ещё может исправить ситуацию",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_23_vael_chooses_player",
+            "failureNodeId": "r2_25_vael_breaks_down"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R1_Vael_Obsessed",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_vael_blame_him",
+          "text": "Перевести всё на Ваэля: он сорвал ритуал и теперь неумело прячет следы",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_22_vael_humiliated",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "P2_Vael_Lying_Badly",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_vael_blame_him_easy",
+          "text": "Поймать его на кривой лжи и свалить всё на него прямо сейчас",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_22_vael_humiliated",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "P2_Vael_Lying_Badly",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_vael_slip_away",
+          "text": "Пока все смотрят друг на друга, просто пройти мимо",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_30_guardroom_hub_free",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 1,
+        "difficultyClass": 5,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "Тебе хватает одного взгляда, чтобы понять: Ваэль уже успел соврать им что-то неровное и несостыкованное. Он боится не тебя — он боится, что сейчас развалится его собственная ложь.",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": "P2_Vael_Lying_Badly"
+    },
+    {
+      "nodeId": "r2_21_vael_blackmail_public",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Стоит тебе произнести слово «Елей», как Ваэль становится белее своей же сутаны. Горт и Бруно мгновенно переводят взгляд на него. Теперь ты держишь его не за горло, а за самую позорную часть его тайны — и можешь либо заставить прикрыть тебя, либо утопить при старших.",
+      "choices": [
+        {
+          "choiceId": "c_r2_blackmail_obey",
+          "text": "Приказать Ваэлю сказать, что ты всего лишь посыльный после сорванного ритуала",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_24_vael_covers_for_player",
+            "failureNodeId": "r2_25_vael_breaks_down"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_blackmail_ruin_him",
+          "text": "Добить его репутацию и стравить со стражей",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_22_vael_humiliated",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_22_vael_humiliated",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ваэль пытается оправдаться, но каждое новое слово лишь глубже вколачивает его в собственный позор. Горт уже хохочет, Бруно злится, что новичок втянул их в дрянь, а сама сцена начинает пахнуть не службой, а внутренним разложением.",
+      "choices": [
+        {
+          "choiceId": "c_r2_humiliated_pass",
+          "text": "Пока они заняты Ваэлем, пройти дальше",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_humiliated_push_fear",
+          "text": "Додавить мысль о том, что Изольда накажет их всех за этот бардак",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_11_fear_manifest_social",
+            "failureNodeId": "r2_10_fear_conflict_start"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Vael_Humiliated",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Divided",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_23_vael_chooses_player",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ваэль смотрит на тебя так, будто именно сейчас решается не дисциплина блока, а его собственная тайная вера. И в этот момент он выбирает не порядок, а тебя. Ложь выходит криво, но достаточно искренне, чтобы на миг удержать старших от резких действий.",
+      "choices": [
+        {
+          "choiceId": "c_r2_obsessed_pass",
+          "text": "Принять его странную помощь и пройти дальше",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_obsessed_distraction",
+          "text": "Использовать его одержимость: пусть отвлечёт Горта и Бруно на себя",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_06_distract_success",
+            "failureNodeId": "r2_25_vael_breaks_down"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Vael_Still_Obsessed",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R2_Vael_CoveredForPlayer",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_24_vael_covers_for_player",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ваэль послушно выдаёт именно ту версию событий, которую ты вложил ему в рот. Старшие не в восторге, но и разбираться прямо сейчас им лень больше, чем хочется быть образцовыми слугами Света. Этого тебе хватает.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_30_guardroom_hub_free",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Vael_CoveredForPlayer",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_25_vael_breaks_down",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Слишком много взглядов, слишком много вранья и слишком мало опоры. Ваэль срывается первым: начинает оправдываться, злиться, заикаться и говорить лишнее. Комната мгновенно перестаёт быть управляемой.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_10_fear_conflict_start",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_40_bound_entry",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "[Звук: карты по столу, тёплое пыхтение жаровни, чужой смех, в который уже вползает что-то липкое.]\n\nВаэль приводит тебя в караульню связанным. Он не зовёт подмогу наверх — он хочет спрятать свою вину здесь, среди пьяных старших и общей распущенности блока. Горт и Бруно смотрят на тебя сначала как на работу, а затем как на способ развеять скуку. Это уже плохая сцена. Вопрос только в том, сломаешь ли ты её раньше, чем она сломает саму себя.",
+      "choices": [
+        {
+          "choiceId": "c_r2_bound_meek",
+          "text": "Сыграть покорность и дать им окончательно расслабиться",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_41_bound_relax",
+            "failureNodeId": "r2_42_bound_rough"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_bound_mock_vael",
+          "text": "Унизить Ваэля при старших и столкнуть их друг с другом",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_43_bound_egos_clash",
+            "failureNodeId": "r2_42_bound_rough"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_bound_knots",
+          "text": "Пока все смотрят не туда, начать незаметно работать с узлами",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 7,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_44_bound_wait",
+            "failureNodeId": "r2_42_bound_rough"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Knots_Loosened",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_bound_read_room",
+          "text": "Прислушаться к комнате и понять, к чему всё это сейчас сорвётся",
+          "skillCheck": {
+            "skillType": 1,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_44_bound_wait",
+            "failureNodeId": "r2_44_bound_wait"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_See_LustManifest_Coming",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 1,
+        "difficultyClass": 6,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "Ты замечаешь это раньше остальных: тени в комнате уже ведут себя слишком жадно, а жара от углей слишком плотная для обычной караульни. Здесь назревает не просто распущенность — здесь назревает Мораль.",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": "R2_See_LustManifest_Coming"
+    },
+    {
+      "nodeId": "r2_41_bound_relax",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Твоя кажущаяся покорность работает слишком хорошо. Дисциплина в караульне размякает окончательно; ты почти физически чувствуешь, как сцена перестаёт быть процедурой и скатывается в распущенное, безответственное «а что нам мешает». ",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_45_lust_buildup",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Relaxed",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_42_bound_rough",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Сцена идёт жёстче и грязнее. Стража становится грубее, Ваэль — тише, а между всем этим быстро исчезает та тонкая перегородка, которая ещё притворялась церковной процедурой. Положение становится хуже — но именно это ускоряет магический срыв.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_45_lust_buildup",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Rough_Handling",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Hostile",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_43_bound_egos_clash",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты бьёшь не по телу, а по иерархии. Старшие начинают смеяться над Ваэлем, Ваэль — оправдываться, и очень быстро вся сцена перестраивается вокруг их уязвлённого самолюбия. Это опасно, но даёт тебе одну вещь: трещину между ними.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_45_lust_buildup",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Divided",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R2_Vael_Humiliated",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_44_bound_wait",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты не рвёшься раньше времени. Комната сама набирает ход: чужое вино, власть без свидетелей, молодой стыд Ваэля, скука старших и твоя связанная фигура в центре этого круга. Достаточно ещё одного толчка, чтобы реальность перестала терпеть происходящее.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_45_lust_buildup",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_45_lust_buildup",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Жаровня будто дышит не в такт огню. Тени липнут к столу, к сапогам, к твоим путам. Смех становится слишком тёплым и гулким для каменной караульни. Здесь уже пахнет не просто распущенностью, а тем моментом, когда желание перестаёт быть человеческим и начинает менять саму комнату.",
+      "choices": [
+        {
+          "choiceId": "c_r2_lust_bait",
+          "text": "Дать сцене сгнить ещё сильнее и довести их до полной потери границ",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_46_lust_manifest",
+            "failureNodeId": "r2_46_lust_manifest"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Player_Provoked_Manifest",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_magic",
+          "text": "Толкнуть назревающую аномалию магически, чтобы она сорвалась раньше",
+          "skillCheck": {
+            "skillType": 7,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_46_lust_manifest",
+            "failureNodeId": "r2_46_lust_manifest"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Player_Shaped_Manifest",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [
+            {
+              "conditionType": 12,
+              "parameter": "",
+              "value": "Mage,Druid,Cleric",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_wait",
+          "text": "Ждать, пока комната сама треснет по шву",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_46_lust_manifest",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_46_lust_manifest",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Из жара, стыда и распущенности рождается нечто, чему здесь давно готовили место: жадная, скользящая аномалия близости и голода, живая тень, хватающая всё подряд. Она никого не спасает — она просто рвёт форму сцены на куски, цепляясь за путы, мебель, оружие и тела сразу. В этом хаосе у тебя появляется одно короткое окно, чтобы снова вернуть себе движение.",
+      "choices": [
+        {
+          "choiceId": "c_r2_lust_slip_free",
+          "text": "Выскользнуть из ослабевших пут, пока аномалия дёргает всё вокруг",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_47_escape_bound_chaos",
+            "failureNodeId": "r2_47_escape_bound_chaos"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Knots_Loosened",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_slip_free_easy",
+          "text": "Выскользнуть из почти готовых узлов, пока аномалия тянет их в стороны",
+          "skillCheck": {
+            "skillType": 4,
+            "difficultyClass": 4,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_47_escape_bound_chaos",
+            "failureNodeId": "r2_47_escape_bound_chaos"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Knots_Loosened",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_rip_free",
+          "text": "Рвануть путы силой, пока аномалия тянет их в стороны",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 5,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_47_escape_bound_chaos",
+            "failureNodeId": "r2_47_escape_bound_chaos"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_vael_cuts",
+          "text": "Заставить Ваэля самому перерезать путы, пока всё валится вокруг него",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_47_escape_bound_chaos",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Vael_Accidentally_Saved_Player",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Guards_Divided",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_lust_vael_cuts_seen",
+          "text": "Заставить Ваэля самому перерезать путы, пока всё валится вокруг него",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_47_escape_bound_chaos",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Vael_Accidentally_Saved_Player",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Guards_Divided",
+              "value": "true",
+              "invert": true
+            },
+            {
+              "conditionType": 0,
+              "parameter": "R2_See_LustManifest_Coming",
+              "value": "true",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_LustManifested",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 0,
+          "parameter1": "R1_TouchedByLustMoral",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_47_escape_bound_chaos",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты вырываешься из сцены живым — не победителем и не триумфатором, а тем, кто сумел пережить чужую гниль и магию, которой эта гниль оказалась слишком вкусна. Нормального лута, чистой маскировки и красивого выхода этот маршрут тебе не даёт. Зато даёт жизнь и очень редкий след на коже мира.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_31_guardroom_hub_dirty",
+      "autoAdvanceDelay": 4.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_10_fear_conflict_start",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Стоит сцене сорваться, как один из стражников тянется к рогу тревоги, а другой шипит на него, что за одного беглого пленника Изольда накажет их самих за профнепригодность. Они боятся не тебя, а её. И именно этот страх первым начинает рвать комнату изнутри.",
+      "choices": [
+        {
+          "choiceId": "c_r2_fear_push",
+          "text": "Додавить их мыслью о наказании и заставить панику сожрать их быстрее",
+          "skillCheck": {
+            "skillType": 3,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_11_fear_manifest_social",
+            "failureNodeId": "r2_12_fear_manifest_violent"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_fear_fight",
+          "text": "Принять прямой конфликт и рассчитывать, что хаос всё равно сломает строй",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_12_fear_manifest_violent",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Guards_Hostile",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_11_fear_manifest_social",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты не столько дерёшься, сколько направляешь их собственный страх. Им уже мерещится не беглый пленник, а гнев Изольды, карцер, сорванные шевроны и публичный позор. Тень от одного из них начинает жить чуть отдельно от тела.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_13_fear_eruption",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_FearManifested",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_12_fear_manifest_violent",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Стражники хватаются за оружие, табуреты летят, карты рассыпаются по полу, и вся караульня на секунду становится слишком тесной для живых людей. В этот самый миг чужой страх наконец находит форму.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_13_fear_eruption",
+      "autoAdvanceDelay": 3.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_FearManifested",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_13_fear_eruption",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Из паники, служебного ужаса и стыда рождается Воплощение Страха — многоглазая, дёрганая тень, которая бросается не на тебя одного, а на всех, в ком чувствует эту трещину. Горт отшатывается, Бруно орёт, а строй караульни рассыпается. Теперь важно не победить красиво, а забрать себе окно, которое открыл их собственный ужас.",
+      "choices": [
+        {
+          "choiceId": "c_r2_fear_slip",
+          "text": "Пока аномалия рвёт строй, проскользнуть к свободному пространству и перевести дух",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_fear_weapons",
+          "text": "Схватить оружие, пока тварь отвлекла охрану",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_60_loot_rack",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_fear_shape",
+          "text": "Подтолкнуть аномалию в сторону стражников магией или инстинктом",
+          "skillCheck": {
+            "skillType": 7,
+            "difficultyClass": 6,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "r2_30_guardroom_hub_free",
+            "failureNodeId": "r2_30_guardroom_hub_free"
+          },
+          "nextNodeId": "",
+          "onChooseActions": [
+            {
+              "actionType": 0,
+              "parameter1": "R2_Player_Shaped_Manifest",
+              "parameter2": "",
+              "intValue": 0,
+              "boolValue": true
+            }
+          ],
+          "conditions": [
+            {
+              "conditionType": 12,
+              "parameter": "",
+              "value": "Mage,Druid,Cleric",
+              "invert": false
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_30_guardroom_hub_free",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Как бы именно ни схлопнулась караульня, сейчас она на несколько минут принадлежит тебе больше, чем Церкви. У стола остались деньги и бумажки, у стены — оружие, в углу — конфискованная дрянь, которую инквизиторы якобы ненавидят, а на деле таскают по карманам. Впереди — решётка к воротам блока, но перед уходом ты ещё можешь выбрать, что забрать с собой.",
+      "choices": [
+        {
+          "choiceId": "c_r2_loot_table",
+          "text": "Осмотреть стол караульни и прибрать золото",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_60_loot_table",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Table_Looted",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_loot_rack",
+          "text": "Осмотреть оружейную стойку и забрать арбалет с алебардой",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_60_loot_rack",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Weapons_Stolen",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_loot_contraband",
+          "text": "Порыться в конфискате и найти церковную контрабанду",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_62_loot_contraband",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Contraband_Looted",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_unlock_gate",
+          "text": "Подойти к решётке и открыть путь дальше",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_70_gate_unlock",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_31_guardroom_hub_dirty",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "После пережитого хаоса караульня уже не выглядит местом, которое стоит долго обыскивать. Здесь всё липкое, треснувшее и слишком живое. Но кое-что схватить всё ещё можно — а потом лучше немедленно уходить к решётке, пока комната не передумала отпускать тебя.",
+      "choices": [
+        {
+          "choiceId": "c_r2_dirty_grab_keys",
+          "text": "Схватить служебную ключницу или запасной ключ от решётки",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_63_dirty_grab_keys",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Dirty_Keys_Grabbed",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_dirty_grab_shred",
+          "text": "Собрать фрагмент аномальной материи, пока он не расползся",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_64_dirty_grab_morale_shred",
+          "onChooseActions": [],
+          "conditions": [
+            {
+              "conditionType": 0,
+              "parameter": "R2_Dirty_Shred_Grabbed",
+              "value": "true",
+              "invert": true
+            }
+          ],
+          "showWhenUnavailable": false,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        },
+        {
+          "choiceId": "c_r2_dirty_leave",
+          "text": "Не рисковать и идти к решётке",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_70_gate_unlock",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_60_loot_table",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты собираешь со стола то, что Инквизиция называет дисциплиной на ночной смене: золото, засаленные карты, бутыль пряного вина и одну короткую записку о том, что часть конфиската никогда не доходит до церковного склада.",
+      "choices": [
+        {
+          "choiceId": "c_r2_back_table",
+          "text": "Вернуться к осмотру караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Table_Looted",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 4,
+          "parameter1": "",
+          "parameter2": "",
+          "intValue": 50,
+          "boolValue": false
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_60_loot_rack",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Со стойки ты снимаешь то, чем эти люди привыкли удерживать порядок на расстоянии и вблизи: тяжёлый арбалет и алебарду охраны. Пускай дальше кто-нибудь попробует сделать вид, что ты всё ещё безоружный беглец.",
+      "choices": [
+        {
+          "choiceId": "c_r2_back_rack",
+          "text": "Вернуться к осмотру караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Weapons_Stolen",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 2,
+          "parameter1": "item_heavy_crossbow",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        },
+        {
+          "actionType": 2,
+          "parameter1": "item_inquisition_halberd",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_62_loot_contraband",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "В ящике у стены ты находишь не святые припасы, а церковную контрабанду: конфискованные флаконы Елея, сырьё из желез Морали и заметку, из которой ясно, что часть всего этого оседает в карманах самих инквизиторов. Свет у них, как обычно, весьма избирательный.",
+      "choices": [
+        {
+          "choiceId": "c_r2_back_contraband",
+          "text": "Вернуться к осмотру караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_30_guardroom_hub_free",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Contraband_Looted",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 2,
+          "parameter1": "item_morale_gland",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        },
+        {
+          "actionType": 2,
+          "parameter1": "item_elei_vial",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_63_dirty_grab_keys",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты хватаешь первое полезное и практичное: запасной ключ от решётки и короткую служебную цепочку. Этого мало, чтобы чувствовать себя богатым, но достаточно, чтобы не застрять здесь ещё хоть на минуту.",
+      "choices": [
+        {
+          "choiceId": "c_r2_back_dirty_keys",
+          "text": "Вернуться к краю караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_31_guardroom_hub_dirty",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Dirty_Keys_Grabbed",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_64_dirty_grab_morale_shred",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты срываешь со стены и пола кусок ещё не растворившейся аномальной материи — тёплый, скользкий, едва терпящий форму. Это выглядит небезопасно, но именно такие находки потом нередко оказываются ценнее чистого золота.",
+      "choices": [
+        {
+          "choiceId": "c_r2_back_dirty_shred",
+          "text": "Вернуться к краю караульни",
+          "skillCheck": {
+            "skillType": 0,
+            "difficultyClass": 0,
+            "isContested": false,
+            "contestedWithSkill": "",
+            "allowRetry": false,
+            "successNodeId": "",
+            "failureNodeId": ""
+          },
+          "nextNodeId": "r2_31_guardroom_hub_dirty",
+          "onChooseActions": [],
+          "conditions": [],
+          "showWhenUnavailable": true,
+          "unavailableTooltip": "Недоступно при текущем классе, расе или условиях",
+          "isHiddenByDefault": false,
+          "llmUnlockCondition": null,
+          "questTag": "",
+          "isNSFWChoice": false,
+          "nsfwSceneId": ""
+        }
+      ],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Dirty_Shred_Grabbed",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        },
+        {
+          "actionType": 2,
+          "parameter1": "item_morale_shred",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_70_gate_unlock",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Ты подходишь к тяжёлой подъёмной решётке, отделяющей караульню от следующего участка катакомб. За ней уже слышны чужие, более мощные и куда менее дисциплинированные голоса — два орка спорят так, словно весь подземный блок существует только для их будущей драки.",
+      "choices": [],
+      "autoAdvanceToNodeId": "r2_71_exit_to_orc_gate",
+      "autoAdvanceDelay": 3.5,
+      "onEnterActions": [
+        {
+          "actionType": 0,
+          "parameter1": "R2_Gate_Unlocked",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": true
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    },
+    {
+      "nodeId": "r2_71_exit_to_orc_gate",
+      "speakerType": 2,
+      "speakerId": "",
+      "text": "Решётка поддаётся. Впереди — спор двух орков о том, кто сильнее и каким способом правильнее вырываться на свободу. Какой бы грязью ни закончилась караульня, дальше тебя ждут уже не пьяные сторожа, а будущие спутники побега.\n\n[КОНЕЦ СЦЕНЫ 2 — ПЕРЕХОД К ОРКУ И ОРЧИХЕ.]",
+      "choices": [],
+      "autoAdvanceToNodeId": "",
+      "autoAdvanceDelay": 2.0,
+      "onEnterActions": [
+        {
+          "actionType": 18,
+          "parameter1": "prologue_room3_orc_gate",
+          "parameter2": "",
+          "intValue": 0,
+          "boolValue": false
+        }
+      ],
+      "emotion": "",
+      "voiceLineId": "",
+      "backgroundOverride": "",
+      "isLLMModifiable": false,
+      "llmContextHint": "",
+      "questTagOnSelect": "",
+      "passiveSkillCheck": {
+        "skillType": 0,
+        "difficultyClass": 0,
+        "isContested": false,
+        "contestedWithSkill": "",
+        "allowRetry": false,
+        "successNodeId": "",
+        "failureNodeId": ""
+      },
+      "passiveSuccessText": "",
+      "passiveFailureText": "",
+      "passiveSuccessFlag": ""
+    }
+  ],
+  "startNodeId": "r2_00_router",
+  "allowLLMModification": true,
+  "llmModifications": []
+}
