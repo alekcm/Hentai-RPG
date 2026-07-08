@@ -118,6 +118,7 @@ namespace RPG.Domains
         public static DomainCard GetCard(string id)
         {
             if (byId == null) Initialize();
+            if (string.IsNullOrEmpty(id)) return null;
             return byId.TryGetValue(id, out var c) ? c : null;
         }
 

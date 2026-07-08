@@ -186,6 +186,7 @@ namespace RPG.Items
         public static IItem GetItem(string id)
         {
             if (byId == null) Initialize();
+            if (string.IsNullOrEmpty(id)) return null;
             return byId.TryGetValue(id, out var it) ? it : null;
         }
 

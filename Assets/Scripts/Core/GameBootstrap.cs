@@ -69,6 +69,7 @@ namespace RPG.Core
                 gameObject.AddComponent<DialogueTestRunner>();
 
             // Поднимаем боевой UI (в скрытом виде).
+            UI.GridCombatView.EnsureExists();
             UI.CombatUI.EnsureExists();
 
             Debug.Log("[GameBootstrap] Game initialized successfully!");

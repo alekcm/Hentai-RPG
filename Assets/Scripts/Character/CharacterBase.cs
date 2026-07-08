@@ -18,6 +18,8 @@ namespace RPG.Character
         public RaceType race;
         public ClassType characterClass;
         public string subclassId;
+        /// <summary>Активная стойка Мастера БИ (brutal/defensive/grapple/sturdy/precise/fast).</summary>
+        public string subclassStance;
         public Gender gender;
         public CharacterStats stats;
 

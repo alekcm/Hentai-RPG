@@ -1,23 +1,21 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using RPG.Combat;
-using RPG.Character;
 using RPG.Items;
-using RPG.Core;
 
 namespace RPG.UI
 {
     /// <summary>
-    /// Минималистичный UI боя для теста правил ГДД (не тактическая сетка!).
+    /// HUD боя поверх GridCombatView.
     /// Показывает:
-    ///  — Пулы Надежды и Страха.
-    ///  — Портреты юнитов со шкалами здоровья/брони/выносливости и «Уклонением».
-    ///  — Кнопки действий выбранного своего юнита: Атака (выбор цели), Короткая передышка, Завершить ход.
-    ///  — Текстовый лог событий.
-    /// Автоматически поднимается сам при OnCombatStart, скрывается при OnCombatEnd.
+    ///  — Верхняя панель: пулы Надежды/Страха, чей ход.
+    ///  — Левая нижняя карточка активного юнита (HP-шкалы, броня, DT, Уклонение, Выносливость, движение).
+    ///  — Правая нижняя панель действий: Двигаться / Атаковать / Карты / Класс / Короткая передышка / Пропустить ход.
+    ///  — Правый лог событий.
+    /// Юнитов игрок выбирает кликом по спрайту НА СЕТКЕ (см. GridCombatView).
+    /// Цели атаки — также на сетке.
     /// </summary>
     public class CombatUI : MonoBehaviour
     {
@@ -34,13 +32,7 @@ namespace RPG.UI
         private Text resourcesText;
         private Text sideText;
         private Text logText;
-        private Transform unitsRow;
-        private Transform actionsRow;
-        private List<GameObject> unitCards = new();
-
-        private CombatUnit currentTargetPick;
-        private bool targetPickMode;
-        private System.Action<CombatUnit> onTargetPicked;
+        private Text selectedInfoText;
         private readonly Queue<string> logLines = new();
 
         private void Awake()
@@ -67,12 +59,16 @@ namespace RPG.UI
             cm.OnCombatStart += HandleStart;
             cm.OnCombatEnd += HandleEnd;
             cm.OnResourcesChanged += RefreshResources;
-            cm.OnUnitActivated += _ => RefreshUnits();
-            cm.OnTurnPassedToSide += side => { sideText.text = side == CombatSide.Player ? "Ход: игрок" : "Ход: враг"; RefreshUnits(); };
+            cm.OnUnitActivated += _ => RefreshSelected();
+            cm.OnTurnPassedToSide += side =>
+            {
+                sideText.text = side == CombatSide.Player ? "Ход: игрок" : "Ход: враг";
+                RefreshSelected();
+            };
             cm.OnCombatEvent += entry =>
             {
                 logLines.Enqueue(entry.message);
-                while (logLines.Count > 10) logLines.Dequeue();
+                while (logLines.Count > 14) logLines.Dequeue();
                 logText.text = string.Join("\n", logLines);
             };
         }
@@ -81,7 +77,7 @@ namespace RPG.UI
         {
             root.SetActive(true);
             RefreshResources();
-            RefreshUnits();
+            RefreshSelected();
         }
 
         private void HandleEnd(bool _)
@@ -103,12 +99,9 @@ namespace RPG.UI
             root = canvasGO;
 
             // Верхняя панель ресурсов.
-            var top = MakePanel(canvasGO.transform, "Top", new Vector2(0, 40), new Vector2(1200, 60));
-            top.anchoredPosition = new Vector2(0, -30 + (Screen.height / 2f) - 30);
+            var top = MakePanel(canvasGO.transform, "Top", new Vector2(0, -10), new Vector2(1000, 60));
             top.anchorMin = top.anchorMax = new Vector2(0.5f, 1f);
             top.pivot = new Vector2(0.5f, 1f);
-            top.anchoredPosition = new Vector2(0, -10);
-            top.sizeDelta = new Vector2(1000, 60);
 
             resourcesText = MakeText(top, "Res", Vector2.zero, 20, FontStyle.Bold);
             resourcesText.rectTransform.sizeDelta = new Vector2(500, 50);
@@ -118,46 +111,45 @@ namespace RPG.UI
             sideText.rectTransform.sizeDelta = new Vector2(300, 50);
             sideText.rectTransform.anchoredPosition = new Vector2(250, 0);
 
-            // Ряд карточек юнитов.
-            var unitsPanel = MakePanel(canvasGO.transform, "Units", Vector2.zero, new Vector2(1200, 200));
-            unitsPanel.anchorMin = unitsPanel.anchorMax = new Vector2(0.5f, 1f);
-            unitsPanel.pivot = new Vector2(0.5f, 1f);
-            unitsPanel.anchoredPosition = new Vector2(0, -80);
-            unitsPanel.sizeDelta = new Vector2(1200, 200);
-            var hg = unitsPanel.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hg.padding = new RectOffset(20, 20, 20, 20);
-            hg.spacing = 12;
-            hg.childAlignment = TextAnchor.MiddleCenter;
-            hg.childForceExpandWidth = false; hg.childForceExpandHeight = false;
-            unitsRow = unitsPanel;
+            // Карточка активного юнита (слева-внизу).
+            var infoPanel = MakePanel(canvasGO.transform, "SelectedInfo", Vector2.zero, new Vector2(280, 180));
+            infoPanel.anchorMin = infoPanel.anchorMax = new Vector2(0f, 0f);
+            infoPanel.pivot = new Vector2(0f, 0f);
+            infoPanel.anchoredPosition = new Vector2(10, 10);
+            selectedInfoText = MakeText(infoPanel, "InfoText", Vector2.zero, 13, FontStyle.Normal);
+            selectedInfoText.rectTransform.sizeDelta = new Vector2(260, 160);
+            selectedInfoText.alignment = TextAnchor.UpperLeft;
+            selectedInfoText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            selectedInfoText.verticalOverflow = VerticalWrapMode.Overflow;
 
-            // Ряд действий.
-            var actionsPanel = MakePanel(canvasGO.transform, "Actions", Vector2.zero, new Vector2(900, 80));
+            // Панель действий (по центру-внизу).
+            var actionsPanel = MakePanel(canvasGO.transform, "Actions", Vector2.zero, new Vector2(1000, 80));
             actionsPanel.anchorMin = actionsPanel.anchorMax = new Vector2(0.5f, 0f);
             actionsPanel.pivot = new Vector2(0.5f, 0f);
-            actionsPanel.anchoredPosition = new Vector2(0, 20);
-            actionsPanel.sizeDelta = new Vector2(900, 80);
-            var hg2 = actionsPanel.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hg2.padding = new RectOffset(10, 10, 10, 10);
-            hg2.spacing = 10;
-            hg2.childAlignment = TextAnchor.MiddleCenter;
-            hg2.childForceExpandWidth = false; hg2.childForceExpandHeight = false;
-            actionsRow = actionsPanel;
+            actionsPanel.anchoredPosition = new Vector2(0, 10);
+            var hg = actionsPanel.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hg.padding = new RectOffset(10, 10, 10, 10);
+            hg.spacing = 8;
+            hg.childAlignment = TextAnchor.MiddleCenter;
+            hg.childForceExpandWidth = false; hg.childForceExpandHeight = false;
 
-            MakeActionButton(actionsRow, "Атаковать", () => BeginTargetPick());
-            MakeActionButton(actionsRow, "Короткая передышка", DoShortRest);
-            MakeActionButton(actionsRow, "Пропустить ход", () => EndTurn(false));
+            MakeActionButton(actionsPanel, "Двигаться",         DoMove);
+            MakeActionButton(actionsPanel, "Атаковать",         DoAttack);
+            MakeActionButton(actionsPanel, "Карты…",            ShowCardsPanel);
+            MakeActionButton(actionsPanel, "Класс…",            ShowClassPanel);
+            MakeActionButton(actionsPanel, "Кор. передышка",    DoShortRest);
+            MakeActionButton(actionsPanel, "Пропустить ход",    () => EndTurn(false));
 
-            // Лог.
-            var logPanel = MakePanel(canvasGO.transform, "Log", Vector2.zero, new Vector2(400, 280));
+            // Лог (справа).
+            var logPanel = MakePanel(canvasGO.transform, "Log", Vector2.zero, new Vector2(360, 340));
             logPanel.anchorMin = logPanel.anchorMax = new Vector2(1f, 0.5f);
             logPanel.pivot = new Vector2(1f, 0.5f);
             logPanel.anchoredPosition = new Vector2(-10, 0);
-            logPanel.sizeDelta = new Vector2(400, 320);
-            logText = MakeText(logPanel, "LogText", Vector2.zero, 13, FontStyle.Normal);
-            logText.rectTransform.sizeDelta = new Vector2(380, 300);
+            logText = MakeText(logPanel, "LogText", Vector2.zero, 12, FontStyle.Normal);
+            logText.rectTransform.sizeDelta = new Vector2(340, 320);
             logText.alignment = TextAnchor.UpperLeft;
             logText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            logText.verticalOverflow = VerticalWrapMode.Overflow;
         }
 
         private static RectTransform MakePanel(Transform parent, string name, Vector2 pos, Vector2 size)
@@ -193,10 +185,12 @@ namespace RPG.UI
             var go = new GameObject("Btn_" + label);
             go.transform.SetParent(parent, false);
             var rt = go.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(180, 44);
+            rt.sizeDelta = new Vector2(150, 44);
             var img = go.AddComponent<Image>();
             img.color = new Color(0.20f, 0.30f, 0.40f, 1f);
             var btn = go.AddComponent<Button>();
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredWidth = 150; le.preferredHeight = 44;
             var t = MakeText(rt, "Lbl", Vector2.zero, 14, FontStyle.Bold);
             t.text = label;
             t.rectTransform.sizeDelta = rt.sizeDelta;
@@ -213,93 +207,125 @@ namespace RPG.UI
             resourcesText.text = $"Надежда: {cm.HopePool}    Страх: {cm.FearPool}";
         }
 
-        private void RefreshUnits()
+        private void RefreshSelected()
         {
-            foreach (var c in unitCards) Destroy(c);
-            unitCards.Clear();
-
             var cm = CombatManager.Instance;
             if (cm == null) return;
-
-            foreach (var u in cm.AllUnits)
+            var u = cm.SelectedUnit;
+            if (u == null)
             {
-                var card = new GameObject($"Unit_{u.unitId}");
-                card.transform.SetParent(unitsRow, false);
-                var rt = card.AddComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(150, 160);
-                var img = card.AddComponent<Image>();
-                img.color = u.side == CombatSide.Player
-                    ? new Color(0.15f, 0.32f, 0.20f, 1f)
-                    : new Color(0.35f, 0.15f, 0.15f, 1f);
-                if (u == cm.SelectedUnit)
-                    img.color += new Color(0.15f, 0.15f, 0.0f, 0f);
-
-                var name = MakeText(rt, "Name", new Vector2(0, 65), 14, FontStyle.Bold);
-                name.text = u.displayName + (u.IsDead ? " ✝" : "");
-                name.rectTransform.sizeDelta = new Vector2(140, 24);
-
-                var sb = new StringBuilder();
-                sb.AppendLine($"HP: {u.stats.maxHealthSlots - u.stats.usedHealthSlots}/{u.stats.maxHealthSlots}");
-                sb.AppendLine($"  ({u.stats.currentSlotHp}/{u.stats.hpPerSlot} HP в шкале)");
-                if (u.stats.maxArmorSlots > 0)
-                    sb.AppendLine($"Броня: {u.stats.maxArmorSlots - u.stats.usedArmorSlots}/{u.stats.maxArmorSlots} (DT {u.stats.damageThreshold})");
-                else
-                    sb.AppendLine("Броня: —");
-                sb.AppendLine($"Уклонение: {u.stats.evasion}");
-                sb.AppendLine($"Выносл.: {u.stats.currentStamina}/{u.stats.maxStamina}");
-                var body = MakeText(rt, "Body", new Vector2(0, -5), 11, FontStyle.Normal);
-                body.text = sb.ToString();
-                body.alignment = TextAnchor.UpperCenter;
-                body.rectTransform.sizeDelta = new Vector2(140, 90);
-
-                var btn = card.AddComponent<Button>();
-                var unitRef = u;
-                btn.onClick.AddListener(() => OnUnitCardClick(unitRef));
-
-                unitCards.Add(card);
+                selectedInfoText.text = "Кликните по своему юниту на карте, чтобы активировать его.";
+                return;
             }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"<b>{u.displayName}</b>");
+            if (u.character != null)
+                sb.AppendLine($"<i>{u.character.race} · {u.character.characterClass} · {u.character.subclassId}</i>");
+            sb.AppendLine($"HP-шкал: {u.stats.maxHealthSlots - u.stats.usedHealthSlots}/{u.stats.maxHealthSlots}  " +
+                          $"({u.stats.currentSlotHp}/{u.stats.hpPerSlot} в шкале)");
+            if (u.stats.maxArmorSlots > 0)
+                sb.AppendLine($"Броня: {u.stats.maxArmorSlots - u.stats.usedArmorSlots}/{u.stats.maxArmorSlots}  " +
+                              $"(DT {u.stats.damageThreshold})");
+            else
+                sb.AppendLine("Броня: —");
+            sb.AppendLine($"Уклонение: {u.stats.evasion}  ·  Выносл.: {u.stats.currentStamina}/{u.stats.maxStamina}");
+            sb.AppendLine($"Движение: {cm.CurrentUnitMoveBudget} клеток");
+
+            var weapon = ItemDatabase.GetWeapon(u.character?.equippedMainWeaponId) ?? u.fallbackWeapon;
+            if (weapon != null)
+                sb.AppendLine($"Оружие: {weapon.displayName} — {weapon.damageDice} ({weapon.range})");
+
+            selectedInfoText.text = sb.ToString();
         }
 
         // ---------- Действия ----------
 
-        private void OnUnitCardClick(CombatUnit u)
-        {
-            var cm = CombatManager.Instance;
-            if (cm == null || !cm.IsCombatActive) return;
-
-            if (targetPickMode)
-            {
-                if (u.side == CombatSide.Enemy && !u.IsDead)
-                {
-                    targetPickMode = false;
-                    var cb = onTargetPicked;
-                    onTargetPicked = null;
-                    cb?.Invoke(u);
-                }
-                return;
-            }
-
-            // Обычный клик — активировать своего юнита.
-            if (u.side == CombatSide.Player && cm.ActiveSide == CombatSide.Player)
-            {
-                cm.ActivatePlayerUnit(u.unitId);
-                RefreshUnits();
-            }
-        }
-
-        private void BeginTargetPick()
+        private void DoMove()
         {
             var cm = CombatManager.Instance;
             if (cm == null || cm.SelectedUnit == null) return;
-            targetPickMode = true;
-            onTargetPicked = target =>
+            var grid = GridCombatView.Instance;
+            if (grid == null) return;
+            if (cm.CurrentUnitMoveBudget <= 0)
             {
-                var res = cm.PerformAttack(cm.SelectedUnit, target);
-                bool successHope = res.hit && res.roll.HopeSide;
-                RefreshUnits();
-                cm.FinishUnitTurn(cm.SelectedUnit, successHope);
-                RefreshUnits();
-            };
+                logLines.Enqueue("Движение исчерпано.");
+                return;
+            }
+            grid.BeginMovePick(cm.SelectedUnit, cm.CurrentUnitMoveBudget);
+        }
+
+        private void DoAttack()
+        {
+            var cm = CombatManager.Instance;
+            if (cm == null || cm.SelectedUnit == null) return;
+            var grid = GridCombatView.Instance;
+            if (grid == null) return;
+
+            var attacker = cm.SelectedUnit;
+            var weapon = ItemDatabase.GetWeapon(attacker.character?.equippedMainWeaponId) ?? attacker.fallbackWeapon;
+            int reach = weapon != null ? RangeInfo.Tiles(weapon.range) : 1;
+
+            grid.BeginTargetPick(attacker, reach,
+                filter: t => t != null && !t.IsDead && t.side == CombatSide.Enemy,
+                onPicked: target =>
+                {
+                    var res = cm.PerformAttack(attacker, target);
+                    bool successHope = res.hit && res.roll.HopeSide;
+                    grid.RefreshAll();
+                    cm.FinishUnitTurn(attacker, successHope);
+                    RefreshSelected();
+                    grid.RefreshAll();
+                });
+        }
+
+        // ---------- Public bridge для CardsPanel ----------
+        public static void RequestTargetPickPublic(System.Predicate<CombatUnit> filter,
+                                                    System.Action<CombatUnit> onPicked,
+                                                    System.Action onCancel)
+        {
+            EnsureExists();
+            var grid = GridCombatView.Instance;
+            var cm = CombatManager.Instance;
+            if (grid != null && cm?.SelectedUnit != null)
+            {
+                grid.BeginTargetPick(cm.SelectedUnit, 24, filter, onPicked, onCancel);
+                return;
+            }
+            // fallback: если сетки нет — просто передадим первую подходящую цель.
+            foreach (var u in cm?.AllUnits ?? new List<CombatUnit>())
+                if (filter == null || filter(u)) { onPicked?.Invoke(u); return; }
+            onCancel?.Invoke();
+        }
+
+        private void ShowCardsPanel()
+        {
+            var cm = CombatManager.Instance;
+            if (cm == null || cm.SelectedUnit == null) return;
+            CardsPanel.Show(cm.SelectedUnit, result =>
+            {
+                if (result == null) return;
+                RefreshResources();
+                RefreshSelected();
+                GridCombatView.Instance?.RefreshAll();
+                if (result.consumeAction)
+                {
+                    cm.FinishUnitTurn(cm.SelectedUnit, result.hopeSuccess);
+                    RefreshSelected();
+                }
+            });
+        }
+
+        private void ShowClassPanel()
+        {
+            var cm = CombatManager.Instance;
+            if (cm == null || cm.SelectedUnit == null) return;
+            ClassActionsPanel.Show(cm.SelectedUnit, () =>
+            {
+                RefreshResources();
+                RefreshSelected();
+                GridCombatView.Instance?.RefreshAll();
+            });
         }
 
         private void DoShortRest()
@@ -314,10 +340,11 @@ namespace RPG.UI
                 yes: () =>
                 {
                     var r = cm.PerformShortRest(cm.SelectedUnit);
-                    RefreshUnits();
+                    RefreshSelected();
+                    GridCombatView.Instance?.RefreshAll();
                     if (r.consumesAction)
                         cm.FinishUnitTurn(cm.SelectedUnit, false);
-                    RefreshUnits();
+                    RefreshSelected();
                 });
         }
 
@@ -326,7 +353,8 @@ namespace RPG.UI
             var cm = CombatManager.Instance;
             if (cm == null || cm.SelectedUnit == null) return;
             cm.FinishUnitTurn(cm.SelectedUnit, hopeSuccess);
-            RefreshUnits();
+            RefreshSelected();
+            GridCombatView.Instance?.RefreshAll();
         }
     }
 }
